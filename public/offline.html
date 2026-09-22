@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chrono hors ligne — TimeStage</title>
+<meta name="description" content="Chronometre de scene utilisable sans connexion, directement dans le navigateur.">
+<meta name="theme-color" content="#0b0e14">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/stage.css">
+<link rel="stylesheet" href="/css/control.css">
+<style>
+  body.offline-display { overflow: hidden; }
+  body.offline-display #app { display: none; }
+  #full-stage { display: none; height: 100dvh; }
+  body.offline-display #full-stage { display: flex; }
+  .offline-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: .8rem; padding: .8rem; align-items: start; }
+  @media (max-width: 900px) { .offline-layout { grid-template-columns: minmax(0, 1fr); } }
+  .big-preview { aspect-ratio: 16 / 9; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--line); background: #05070c; }
+</style>
+</head>
+<body class="control">
+
+<div id="app">
+  <header class="topbar">
+    <span class="brand"><img src="/icons/icon.svg" alt="" class="brand-mark" width="22" height="22"> TimeStage</span>
+    <span class="chip" id="net-chip"><span class="dot"></span><span id="net-text">Hors ligne</span></span>
+    <span class="spacer"></span>
+    <span class="chip" id="cache-chip">Disponible sans reseau</span>
+    <button class="btn sm primary" id="btn-open-display">Ouvrir l'affichage</button>
+    <a class="btn sm ghost" href="/">Mode connecte</a>
+  </header>
+
+  <main class="offline-layout">
+    <div class="col-stack">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Chronometre local</h2>
+          <span class="chip" id="phase-chip">Pret</span>
+        </div>
+        <div class="big-preview"><div id="preview-stage"></div></div>
+
+        <div class="transport" style="margin-top:.7rem">
+          <button class="btn ok lg" id="btn-toggle">Demarrer</button>
+          <button class="btn" id="btn-reset">Remise a zero</button>
+          <button class="btn" id="btn-restart">Relancer</button>
+        </div>
+
+        <div class="nudge-grid" style="margin-top:.6rem">
+          <button class="btn sm" data-add="-300000">-5 min</button>
+          <button class="btn sm" data-add="-60000">-1 min</button>
+          <button class="btn sm" data-add="60000">+1 min</button>
+          <button class="btn sm" data-add="300000">+5 min</button>
+        </div>
+
+        <form class="field-row" id="duration-form" style="margin-top:.6rem">
+          <div class="field grow">
+            <label for="duration-input">Duree (ex. 5, 5:30, 1h15, 90s)</label>
+            <input type="text" id="duration-input" class="mono" autocomplete="off">
+          </div>
+          <button class="btn" type="submit">Appliquer</button>
+        </form>
+
+        <div class="row tight" style="margin-top:.5rem">
+          <button class="btn sm ghost" data-preset="60000">1 min</button>
+          <button class="btn sm ghost" data-preset="180000">3 min</button>
+          <button class="btn sm ghost" data-preset="300000">5 min</button>
+          <button class="btn sm ghost" data-preset="600000">10 min</button>
+          <button class="btn sm ghost" data-preset="1200000">20 min</button>
+          <button class="btn sm ghost" data-preset="2700000">45 min</button>
+        </div>
+
+        <div class="field-row" style="margin-top:.6rem">
+          <div class="field grow">
+            <label for="title-input">Titre</label>
+            <input type="text" id="title-input" maxlength="120" placeholder="Ex. Keynote">
+          </div>
+          <div class="field grow">
+            <label for="speaker-input">Intervenant</label>
+            <input type="text" id="speaker-input" maxlength="120">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Mode &amp; format</h2><span class="chip mono" id="format-label">MM:SS</span></div>
+        <div class="seg" id="mode-seg" role="group" aria-label="Mode">
+          <button type="button" data-mode="countdown" aria-pressed="true">Compte a rebours</button>
+          <button type="button" data-mode="countup" aria-pressed="false">Chronometre</button>
+          <button type="button" data-mode="clock" aria-pressed="false">Horloge</button>
+        </div>
+        <div class="format-grid" style="margin-top:.6rem">
+          <div class="field">
+            <label for="fmt-h">Heures</label>
+            <select id="fmt-h"><option value="auto">Automatique</option><option value="on">Toujours</option><option value="off">Jamais</option></select>
+          </div>
+          <div class="field">
+            <label for="fmt-m">Minutes</label>
+            <select id="fmt-m"><option value="on">Afficher</option><option value="off">Masquer</option></select>
+          </div>
+          <div class="field">
+            <label for="fmt-s">Secondes</label>
+            <select id="fmt-s"><option value="on">Afficher</option><option value="off">Masquer</option></select>
+          </div>
+          <div class="field">
+            <label for="fmt-ms">Millisecondes</label>
+            <select id="fmt-ms"><option value="0">Aucune</option><option value="1">.d</option><option value="2">.cc</option><option value="3">.mmm</option></select>
+          </div>
+        </div>
+        <div class="field-row" style="margin-top:.6rem">
+          <div class="field grow"><label for="wrapup-input">Seuil ambre</label><input type="text" id="wrapup-input" class="mono"></div>
+          <div class="field grow"><label for="final-input">Seuil rouge</label><input type="text" id="final-input" class="mono"></div>
+        </div>
+        <label class="check" style="margin-top:.5rem"><input type="checkbox" id="overrun-input"> Continuer en negatif apres zero</label>
+      </section>
+    </div>
+
+    <div class="col-stack">
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Message a l'ecran</h2><span class="chip" id="message-state">Masque</span></div>
+        <div class="preset-grid" id="presets"></div>
+        <form id="message-form" class="stack" style="margin-top:.6rem">
+          <div class="field">
+            <label for="message-text">Message libre</label>
+            <textarea id="message-text" maxlength="400" rows="2"></textarea>
+          </div>
+          <div class="row tight">
+            <select id="message-style" style="width:8rem">
+              <option value="info">Info</option>
+              <option value="warn">Attention</option>
+              <option value="alert">Urgent</option>
+              <option value="success">Succes</option>
+            </select>
+            <label class="check"><input type="checkbox" id="message-flash"> Clignotant</label>
+            <button class="btn primary grow" type="submit">Envoyer</button>
+            <button class="btn" type="button" id="btn-hide-message">Masquer</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Deroule local</h2><span class="chip" id="parts-count">0 partie</span></div>
+        <div class="row tight">
+          <button class="btn sm" id="btn-prev">← Precedente</button>
+          <button class="btn sm" id="btn-next">Suivante →</button>
+          <button class="btn sm danger" id="btn-clear-parts" style="margin-left:auto">Vider</button>
+        </div>
+        <ul class="list" id="parts-list" style="margin-top:.6rem"></ul>
+        <form id="part-form" class="field-row" style="margin-top:.6rem">
+          <div class="field grow"><label for="part-title">Nouvelle partie</label><input type="text" id="part-title" maxlength="120" placeholder="Titre" required></div>
+          <div class="field" style="width:6.5rem"><label for="part-duration">Duree</label><input type="text" id="part-duration" class="mono" value="10:00"></div>
+          <button class="btn" type="submit">Ajouter</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Affichage</h2></div>
+        <div class="field">
+          <label for="theme-select">Theme</label>
+          <select id="theme-select"><option value="dark">Sombre</option><option value="light">Clair</option><option value="contrast">Contraste maximal</option></select>
+        </div>
+        <div class="stack" style="margin-top:.6rem">
+          <label class="check"><input type="checkbox" data-setting="showTitle"> Titre</label>
+          <label class="check"><input type="checkbox" data-setting="showSpeaker"> Intervenant</label>
+          <label class="check"><input type="checkbox" data-setting="showClock"> Heure du jour</label>
+          <label class="check"><input type="checkbox" data-setting="showProgress"> Barre de progression</label>
+          <label class="check"><input type="checkbox" data-setting="showNextPart"> Partie suivante</label>
+          <label class="check"><input type="checkbox" data-setting="flashOnEnd"> Clignoter au depassement</label>
+        </div>
+        <div class="row tight" style="margin-top:.7rem">
+          <button class="btn grow" id="btn-blackout" aria-pressed="false">Ecran noir</button>
+          <button class="btn ghost" id="btn-fullscreen">Plein ecran ici</button>
+        </div>
+        <p class="muted" style="margin:.7rem 0 0">
+          <small>Tout reste dans ce navigateur. « Ouvrir l'affichage » lance une seconde fenetre synchronisee sur cet appareil, sans reseau.</small>
+        </p>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="full-stage"></div>
+
+<script type="module" src="/js/offline.js"></script>
+</body>
+</html>

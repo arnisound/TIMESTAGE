@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Regie — TimeStage</title>
+<meta name="description" content="Fenetre de controle du chronometre de scene TimeStage.">
+<meta name="theme-color" content="#0b0e14">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/stage.css">
+<link rel="stylesheet" href="/css/control.css">
+</head>
+<body class="control">
+
+<header class="topbar">
+  <span class="brand">
+    <img src="/icons/icon.svg" alt="" class="brand-mark" width="22" height="22">
+    TimeStage
+  </span>
+  <span class="code-badge" id="room-code" title="Code de la salle">-----</span>
+  <input type="text" id="session-name" placeholder="Nom de la session" maxlength="80" style="width:12rem">
+  <span class="spacer"></span>
+  <span class="chip" id="status"><span class="dot"></span><span id="status-text">Connexion…</span></span>
+  <span class="chip" id="audience" title="Appareils connectes">0 ecran · 0 public</span>
+  <button class="btn sm" id="btn-open-display">Ouvrir l'affichage</button>
+  <button class="btn sm primary" id="btn-share">Partager (QR)</button>
+  <button class="btn sm ghost icon" id="btn-help" title="Raccourcis clavier">?</button>
+</header>
+
+<main class="layout">
+
+  <!-- Colonne 1 : chrono -->
+  <div class="col-stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Chronometre</h2>
+        <span class="chip" id="phase-chip">Pret</span>
+      </div>
+      <div class="preview"><div id="preview-stage"></div></div>
+
+      <div class="transport" style="margin-top:.7rem">
+        <button class="btn ok lg" id="btn-toggle">Demarrer</button>
+        <button class="btn" id="btn-reset">Remettre a zero</button>
+        <button class="btn" id="btn-restart">Relancer</button>
+      </div>
+
+      <div class="stack" style="margin-top:.7rem">
+        <div>
+          <label>Ajuster la duree</label>
+          <div class="nudge-grid">
+            <button class="btn sm" data-add="-300000">-5 min</button>
+            <button class="btn sm" data-add="-60000">-1 min</button>
+            <button class="btn sm" data-add="60000">+1 min</button>
+            <button class="btn sm" data-add="300000">+5 min</button>
+          </div>
+        </div>
+        <div>
+          <label>Decaler le temps ecoule</label>
+          <div class="nudge-grid">
+            <button class="btn sm" data-seek="-60000">-1 min</button>
+            <button class="btn sm" data-seek="-10000">-10 s</button>
+            <button class="btn sm" data-seek="10000">+10 s</button>
+            <button class="btn sm" data-seek="60000">+1 min</button>
+          </div>
+        </div>
+        <form class="field-row" id="duration-form">
+          <div class="field grow">
+            <label for="duration-input">Duree (ex. 5, 5:30, 1h15, 90s)</label>
+            <input type="text" id="duration-input" class="mono" autocomplete="off" placeholder="05:00">
+          </div>
+          <button class="btn" type="submit">Appliquer</button>
+        </form>
+        <div class="field-row">
+          <div class="field grow">
+            <label for="title-input">Titre affiche</label>
+            <input type="text" id="title-input" maxlength="120" placeholder="Ex. Ouverture">
+          </div>
+          <div class="field grow">
+            <label for="speaker-input">Intervenant</label>
+            <input type="text" id="speaker-input" maxlength="120" placeholder="Ex. Camille">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2 class="panel-title">Mode &amp; format</h2><span class="chip mono" id="format-label">MM:SS</span></div>
+      <div class="seg" id="mode-seg" role="group" aria-label="Mode du chronometre">
+        <button type="button" data-mode="countdown" aria-pressed="true">Compte a rebours</button>
+        <button type="button" data-mode="countup" aria-pressed="false">Chronometre</button>
+        <button type="button" data-mode="clock" aria-pressed="false">Horloge</button>
+      </div>
+
+      <div class="row tight" style="margin-top:.6rem">
+        <button class="btn sm ghost" data-format='{"h":"off","m":"on","s":"on","ms":0}'>MM:SS</button>
+        <button class="btn sm ghost" data-format='{"h":"on","m":"on","s":"on","ms":0}'>HH:MM:SS</button>
+        <button class="btn sm ghost" data-format='{"h":"off","m":"on","s":"on","ms":2}'>MM:SS.cc</button>
+        <button class="btn sm ghost" data-format='{"h":"off","m":"on","s":"off","ms":0}'>MM</button>
+        <button class="btn sm ghost" data-format='{"h":"off","m":"off","s":"on","ms":3}'>SS.mmm</button>
+      </div>
+
+      <div class="format-grid" style="margin-top:.6rem">
+        <div class="field">
+          <label for="fmt-h">Heures</label>
+          <select id="fmt-h">
+            <option value="auto">Automatique</option>
+            <option value="on">Toujours</option>
+            <option value="off">Jamais</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fmt-m">Minutes</label>
+          <select id="fmt-m"><option value="on">Afficher</option><option value="off">Masquer</option></select>
+        </div>
+        <div class="field">
+          <label for="fmt-s">Secondes</label>
+          <select id="fmt-s"><option value="on">Afficher</option><option value="off">Masquer</option></select>
+        </div>
+        <div class="field">
+          <label for="fmt-ms">Millisecondes</label>
+          <select id="fmt-ms">
+            <option value="0">Aucune</option>
+            <option value="1">1 chiffre (.d)</option>
+            <option value="2">2 chiffres (.cc)</option>
+            <option value="3">3 chiffres (.mmm)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row" style="margin-top:.6rem">
+        <div class="field grow">
+          <label for="wrapup-input">Seuil ambre</label>
+          <input type="text" id="wrapup-input" class="mono" placeholder="2:00">
+        </div>
+        <div class="field grow">
+          <label for="final-input">Seuil rouge</label>
+          <input type="text" id="final-input" class="mono" placeholder="0:30">
+        </div>
+      </div>
+      <label class="check" style="margin-top:.5rem">
+        <input type="checkbox" id="overrun-input"> Continuer en negatif apres zero
+      </label>
+    </section>
+  </div>
+
+  <!-- Colonne 2 : deroule -->
+  <div class="col-stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Deroule de la session</h2>
+        <span class="chip" id="parts-count">0 partie</span>
+      </div>
+      <div class="row tight">
+        <button class="btn sm" id="btn-prev">← Precedente</button>
+        <button class="btn sm" id="btn-next">Suivante →</button>
+        <label class="check" style="margin-left:auto">
+          <input type="checkbox" id="auto-advance"> Enchainer
+        </label>
+      </div>
+      <ul class="list" id="parts-list" style="margin-top:.6rem"></ul>
+      <form id="part-form" class="stack" style="margin-top:.7rem">
+        <div class="field-row">
+          <div class="field grow">
+            <label for="part-title">Nouvelle partie</label>
+            <input type="text" id="part-title" placeholder="Titre" maxlength="120" required>
+          </div>
+          <div class="field" style="width:6.5rem">
+            <label for="part-duration">Duree</label>
+            <input type="text" id="part-duration" class="mono" placeholder="10:00" value="10:00">
+          </div>
+          <button class="btn" type="submit">Ajouter</button>
+        </div>
+      </form>
+      <div class="row tight" style="margin-top:.6rem">
+        <button class="btn sm ghost" id="btn-export">Exporter</button>
+        <button class="btn sm ghost" id="btn-import">Importer</button>
+        <button class="btn sm danger" id="btn-clear-parts" style="margin-left:auto">Vider</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2 class="panel-title">Affichage</h2></div>
+      <div class="field">
+        <label for="display-name">Nom affiche sur l'ecran</label>
+        <input type="text" id="display-name" maxlength="80" placeholder="Optionnel">
+      </div>
+      <div class="field" style="margin-top:.5rem">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select">
+          <option value="dark">Sombre</option>
+          <option value="light">Clair</option>
+          <option value="contrast">Contraste maximal</option>
+        </select>
+      </div>
+      <div class="stack" style="margin-top:.6rem">
+        <label class="check"><input type="checkbox" data-setting="showTitle"> Titre</label>
+        <label class="check"><input type="checkbox" data-setting="showSpeaker"> Intervenant</label>
+        <label class="check"><input type="checkbox" data-setting="showClock"> Heure du jour</label>
+        <label class="check"><input type="checkbox" data-setting="showProgress"> Barre de progression</label>
+        <label class="check"><input type="checkbox" data-setting="showNextPart"> Partie suivante</label>
+        <label class="check"><input type="checkbox" data-setting="flashOnEnd"> Clignoter au depassement</label>
+      </div>
+      <button class="btn block" id="btn-blackout" style="margin-top:.7rem" aria-pressed="false">Ecran noir</button>
+    </section>
+  </div>
+
+  <!-- Colonne 3 : messages et questions -->
+  <div class="col-stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Message a l'ecran</h2>
+        <span class="chip" id="message-state">Masque</span>
+      </div>
+      <div class="preset-grid" id="presets"></div>
+      <form id="message-form" class="stack" style="margin-top:.7rem">
+        <div class="field">
+          <label for="message-text">Message libre</label>
+          <textarea id="message-text" maxlength="400" placeholder="Ex. On passe aux questions"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field" style="width:7.5rem">
+            <label for="message-style">Style</label>
+            <select id="message-style">
+              <option value="info">Info</option>
+              <option value="warn">Attention</option>
+              <option value="alert">Urgent</option>
+              <option value="success">Succes</option>
+            </select>
+          </div>
+          <div class="field" style="width:7.5rem">
+            <label for="message-auto">Masquer apres</label>
+            <select id="message-auto">
+              <option value="0">Manuel</option>
+              <option value="5000">5 s</option>
+              <option value="10000">10 s</option>
+              <option value="30000">30 s</option>
+              <option value="60000">1 min</option>
+            </select>
+          </div>
+          <label class="check" style="margin-bottom:.5rem"><input type="checkbox" id="message-flash"> Clignotant</label>
+        </div>
+        <div class="row tight">
+          <button class="btn primary grow" type="submit">Envoyer</button>
+          <button class="btn" type="button" id="btn-hide-message">Masquer</button>
+          <button class="btn sm ghost" type="button" id="btn-save-preset">+ Preset</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Questions du public</h2>
+        <label class="check"><input type="checkbox" id="questions-open"> Ouvertes</label>
+      </div>
+      <div class="row between">
+        <div class="tabs" id="q-tabs" role="tablist">
+          <button role="tab" data-tab="pending" aria-selected="true">En attente <span id="count-pending">0</span></button>
+          <button role="tab" data-tab="approved" aria-selected="false">Validees <span id="count-approved">0</span></button>
+          <button role="tab" data-tab="all" aria-selected="false">Toutes</button>
+        </div>
+        <button class="btn sm ghost" id="btn-qr-ask">QR public</button>
+      </div>
+      <ul class="list" id="questions-list" style="margin-top:.6rem"></ul>
+      <div class="row tight" style="margin-top:.6rem">
+        <label class="check"><input type="checkbox" id="require-approval"> Validation obligatoire</label>
+        <button class="btn sm danger" id="btn-clear-questions" style="margin-left:auto">Effacer</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Partage -->
+<dialog id="share-dialog">
+  <div class="dialog-head">
+    <h2>Partager la salle <span class="code-badge" id="share-code"></span></h2>
+    <button class="btn sm ghost" data-close>Fermer</button>
+  </div>
+  <div class="dialog-body">
+    <div class="qr-grid" id="qr-grid"></div>
+    <p class="muted" style="margin-top:1rem"><small>Le lien de regie contient la cle de controle : ne le diffusez qu'aux personnes de la regie.</small></p>
+  </div>
+</dialog>
+
+<!-- Edition d'une partie -->
+<dialog id="part-dialog">
+  <form method="dialog">
+    <div class="dialog-head"><h2>Modifier la partie</h2><button class="btn sm ghost" value="cancel">Fermer</button></div>
+    <div class="dialog-body stack">
+      <div class="field"><label for="edit-title">Titre</label><input type="text" id="edit-title" maxlength="120"></div>
+      <div class="field-row">
+        <div class="field grow"><label for="edit-speaker">Intervenant</label><input type="text" id="edit-speaker" maxlength="120"></div>
+        <div class="field" style="width:7rem"><label for="edit-duration">Duree</label><input type="text" id="edit-duration" class="mono"></div>
+        <div class="field" style="width:9rem">
+          <label for="edit-mode">Mode</label>
+          <select id="edit-mode"><option value="countdown">Rebours</option><option value="countup">Chrono</option></select>
+        </div>
+      </div>
+      <div class="field"><label for="edit-notes">Notes (regie uniquement)</label><textarea id="edit-notes" maxlength="2000"></textarea></div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn ghost" value="cancel">Annuler</button>
+      <button class="btn primary" value="save" id="edit-save">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Cle de regie -->
+<dialog id="key-dialog">
+  <form id="key-form">
+    <div class="dialog-head"><h2>Cle de regie requise</h2></div>
+    <div class="dialog-body stack">
+      <p class="muted" style="margin:0">
+        Cette fenetre pilote la salle <strong id="key-code"></strong>. Pour prendre la main depuis cet appareil,
+        collez le lien de regie complet (celui du QR code « Regie ») ou scannez-le a nouveau.
+      </p>
+      <div class="field">
+        <label for="key-input">Lien de regie ou cle</label>
+        <input type="text" id="key-input" placeholder="https://…/c/ABCDE#t=…" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <a class="btn ghost" id="key-display-link" href="#">Ouvrir l'affichage a la place</a>
+      <button class="btn primary" type="submit">Prendre la main</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Raccourcis -->
+<dialog id="help-dialog">
+  <div class="dialog-head"><h2>Raccourcis clavier</h2><button class="btn sm ghost" data-close>Fermer</button></div>
+  <div class="dialog-body">
+    <div class="shortcut-list">
+      <div><span>Demarrer / mettre en pause</span> <span class="kbd">Espace</span></div>
+      <div><span>Remettre a zero</span> <span class="kbd">R</span></div>
+      <div><span>Relancer</span> <span class="kbd">Maj + R</span></div>
+      <div><span>Partie suivante</span> <span class="kbd">N</span></div>
+      <div><span>Partie precedente</span> <span class="kbd">P</span></div>
+      <div><span>+1 minute</span> <span class="kbd">&uarr;</span></div>
+      <div><span>-1 minute</span> <span class="kbd">&darr;</span></div>
+      <div><span>Masquer le message</span> <span class="kbd">Echap</span></div>
+      <div><span>Ecran noir</span> <span class="kbd">B</span></div>
+      <div><span>Champ message</span> <span class="kbd">M</span></div>
+    </div>
+  </div>
+</dialog>
+
+<script type="module" src="/js/control.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Affichage — TimeStage</title>
+<meta name="description" content="Fenetre d'affichage du chronometre de scene TimeStage.">
+<meta name="theme-color" content="#05070c">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/stage.css">
+<style>
+  html, body { height: 100%; overflow: hidden; background: #05070c; }
+  #stage { height: 100dvh; }
+  .hud {
+    position: fixed; top: 0; right: 0; z-index: 10;
+    display: flex; gap: .4rem; align-items: center;
+    padding: .5rem; opacity: 0; transition: opacity .2s ease;
+  }
+  body.show-hud .hud, .hud:focus-within { opacity: 1; }
+  body.idle-cursor { cursor: none; }
+  .join { display: flex; align-items: center; justify-content: center; height: 100dvh; padding: 1rem; }
+  .join .panel { width: min(26rem, 100%); }
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <div class="hud">
+    <span class="chip" id="status"><span class="dot"></span><span id="status-text">Connexion…</span></span>
+    <button class="btn sm ghost" id="btn-fs" title="Plein ecran (F)">⛶</button>
+  </div>
+
+  <div class="join hidden" id="join">
+    <form class="panel" id="join-form">
+      <h1>Fenetre d'affichage</h1>
+      <p class="muted">Saisissez le code de salle affiche dans la regie.</p>
+      <div class="field">
+        <label for="code">Code de salle</label>
+        <input id="code" name="code" type="text" maxlength="8" autocomplete="off" autocapitalize="characters"
+               spellcheck="false" placeholder="ABCDE" class="mono" required>
+      </div>
+      <div class="row" style="margin-top:.8rem">
+        <button class="btn primary grow" type="submit">Afficher</button>
+        <a class="btn ghost" href="/offline">Mode hors ligne</a>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="/js/display.js"></script>
+</body>
+</html>

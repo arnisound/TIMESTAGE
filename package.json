@@ -1,0 +1,19 @@
+{
+  "name": "timestage",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chronometre de scene : fenetre de controle, fenetre d'affichage, partage par QR code, messages, questions du public et mode hors ligne.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}

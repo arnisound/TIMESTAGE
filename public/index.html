@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TimeStage — chronometre de scene</title>
+<meta name="description" content="Chronometre de scene : fenetre de regie, affichage plein ecran, partage par QR code, messages a l'orateur, questions du public et mode hors ligne.">
+<meta name="theme-color" content="#0b0e14">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
+  .hero { display: grid; gap: 1rem; padding: 2.5rem 0 1.5rem; }
+  .hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); letter-spacing: -.02em; }
+  .hero p.lead { font-size: 1.05rem; color: var(--muted); max-width: 42rem; }
+  .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .8rem; margin-top: .5rem; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 2rem; }
+  .feature h3 { margin-bottom: .2rem; }
+  .feature p { color: var(--muted); font-size: .88rem; margin: 0; }
+  .site-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: .5rem; }
+  .brand { display: flex; align-items: center; gap: .5rem; font-weight: 800; }
+  .recent { margin-top: 1.5rem; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .82rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site-head">
+    <span class="brand"><img src="/icons/icon.svg" alt="" width="24" height="24"> TimeStage</span>
+    <nav class="row tight">
+      <a class="btn sm ghost" href="/offline">Mode hors ligne</a>
+      <a class="btn sm ghost" href="https://github.com/arnisound/timestage" rel="noopener">Code source</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Le chronometre de scene, de la regie a l'ecran.</h1>
+    <p class="lead">
+      Une fenetre de regie, un affichage plein ecran, et tout ce qu'il faut autour :
+      partage par QR code, messages a l'orateur, questions du public moderees,
+      deroule de session et un mode hors ligne qui fonctionne sans reseau.
+    </p>
+
+    <div class="actions">
+      <form class="panel" id="create-form">
+        <h2>Nouvelle session</h2>
+        <p class="muted"><small>Cree une salle, ouvre la regie et vous donne les QR codes a partager.</small></p>
+        <div class="field">
+          <label for="name">Nom de la session (optionnel)</label>
+          <input type="text" id="name" maxlength="80" placeholder="Conference du mardi" autocomplete="off">
+        </div>
+        <button class="btn primary block lg" type="submit" style="margin-top:.7rem" id="create-btn">Creer la session</button>
+      </form>
+
+      <form class="panel" id="join-form">
+        <h2>Rejoindre un affichage</h2>
+        <p class="muted"><small>Sur un ecran de scene, une tablette ou un retour : saisissez le code de la salle.</small></p>
+        <div class="field">
+          <label for="code">Code de salle</label>
+          <input type="text" id="code" maxlength="8" class="mono" placeholder="ABCDE" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false" style="letter-spacing:.2em;text-transform:uppercase">
+        </div>
+        <div class="row" style="margin-top:.7rem">
+          <button class="btn block grow" type="submit">Ouvrir l'affichage</button>
+        </div>
+        <div class="row tight" style="margin-top:.4rem">
+          <button class="btn sm ghost grow" type="button" id="join-ask">Poser une question</button>
+          <button class="btn sm ghost grow" type="button" id="join-control">Reprendre la regie</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="recent hidden" id="recent">
+      <h2 class="panel-title">Vos salles recentes</h2>
+      <ul class="list" id="recent-list"></ul>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="panel feature">
+      <h3>Regie et affichage separes</h3>
+      <p>Pilotez depuis un ecran, projetez sur l'autre. Tout est synchronise a la milliseconde pres grace a l'horloge du serveur.</p>
+    </div>
+    <div class="panel feature">
+      <h3>Format libre</h3>
+      <p>Heures, minutes, secondes, millisecondes : activez exactement les unites dont vous avez besoin, compte a rebours, chrono ou horloge.</p>
+    </div>
+    <div class="panel feature">
+      <h3>Messages a l'orateur</h3>
+      <p>Presets « Merci de conclure », « Parlez plus fort », ou message libre, avec clignotement et masquage automatique.</p>
+    </div>
+    <div class="panel feature">
+      <h3>Questions du public</h3>
+      <p>Le public scanne un QR code et envoie ses questions. La regie valide avant toute projection a l'ecran.</p>
+    </div>
+    <div class="panel feature">
+      <h3>Deroule de session</h3>
+      <p>Preparez vos parties a l'avance, chargez-les en un clic, enchainez automatiquement. Import et export en JSON.</p>
+    </div>
+    <div class="panel feature">
+      <h3>Hors ligne</h3>
+      <p>Un chrono complet qui tourne dans le navigateur sans aucune connexion, une fois la page visitee. Ideal en salle sans reseau.</p>
+    </div>
+  </section>
+
+  <footer>
+    TimeStage — licence MIT. Aucune inscription, aucune donnee personnelle requise.
+  </footer>
+</div>
+<script type="module" src="/js/index.js"></script>
+</body>
+</html>

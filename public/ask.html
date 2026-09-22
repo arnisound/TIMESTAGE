@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Poser une question — TimeStage</title>
+<meta name="description" content="Envoyez votre question a la regie. Elle sera lue et validee avant affichage.">
+<meta name="theme-color" content="#0b0e14">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  .wrap { max-width: 34rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: 1rem; }
+  .live { display: flex; align-items: baseline; gap: .5rem; justify-content: center; padding: .6rem; }
+  .live .value { font-family: var(--mono); font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .live .value[data-phase="final"], .live .value[data-phase="overrun"] { color: var(--danger); }
+  .live .value[data-phase="wrapup"] { color: var(--warn); }
+  .mine li { font-size: .88rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <span class="row tight"><img src="/icons/icon.svg" alt="" width="22" height="22"><strong id="room-name">TimeStage</strong></span>
+    <span class="code-badge" id="room-code">-----</span>
+  </header>
+
+  <section class="panel" id="live-panel">
+    <div class="panel-head"><h2 class="panel-title" id="live-title">En cours</h2><span class="chip" id="status">…</span></div>
+    <div class="live"><span class="value mono" id="live-value">--:--</span></div>
+  </section>
+
+  <section class="panel" style="margin-top:.8rem">
+    <div class="panel-head"><h2 class="panel-title">Votre question</h2></div>
+    <form id="ask-form" class="stack">
+      <div class="field">
+        <label for="text">Question</label>
+        <textarea id="text" maxlength="500" required placeholder="Ecrivez votre question…" rows="4"></textarea>
+        <small class="muted" id="counter">0 / 500</small>
+      </div>
+      <div class="field">
+        <label for="author">Votre prenom (optionnel)</label>
+        <input type="text" id="author" maxlength="60" autocomplete="given-name" placeholder="Anonyme">
+      </div>
+      <button class="btn primary block lg" type="submit" id="send">Envoyer a la regie</button>
+      <p class="muted" style="margin:0"><small>Votre question est relue par la regie avant toute projection a l'ecran.</small></p>
+    </form>
+    <div class="empty hidden" id="closed">Les questions sont fermees pour le moment.</div>
+  </section>
+
+  <section class="panel hidden" id="mine-panel" style="margin-top:.8rem">
+    <div class="panel-head"><h2 class="panel-title">Vos envois</h2></div>
+    <ul class="list mine" id="mine"></ul>
+  </section>
+
+  <p class="center muted" style="margin-top:1.5rem"><small><a href="/">TimeStage</a></small></p>
+</div>
+<script type="module" src="/js/ask.js"></script>
+</body>
+</html>
