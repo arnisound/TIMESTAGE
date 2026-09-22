@@ -21,9 +21,12 @@ if (!code) {
   start(code);
 }
 
+let joinWired = false;
 function showJoin() {
   $('#join').classList.remove('hidden');
   stageRoot.classList.add('hidden');
+  if (joinWired) return;
+  joinWired = true;
   $('#join-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const value = $('#code').value.trim().toUpperCase();
@@ -35,9 +38,11 @@ function start(roomCode) {
   document.title = `Affichage ${roomCode} — TimeStage`;
   const conn = new RoomConnection({ code: roomCode, role: 'display' });
   let state = null;
+  let missingAttempts = 0;
 
   conn.addEventListener('state', (event) => {
     state = event.detail;
+    missingAttempts = 0;
     stageRoot.dataset.theme = state.settings?.theme || 'dark';
     document.title = `${state.settings?.displayName || state.session?.name || 'Affichage'} ${roomCode} — TimeStage`;
   });
@@ -48,13 +53,33 @@ function start(roomCode) {
     statusChip.className = 'chip ' + (status === 'online' ? 'ok' : status === 'offline' ? 'danger' : '');
     dot.className = 'dot ' + (status === 'online' ? 'ok' : status === 'offline' ? 'danger' : 'warn');
     statusText.textContent =
-      status === 'online' ? 'En ligne' : status === 'connecting' ? 'Connexion…' : status === 'offline' ? 'Hors ligne — le chrono continue' : 'Arrete';
+      status === 'online'
+        ? 'En ligne'
+        : conn.missingRoom
+          ? 'Salle indisponible — nouvelle tentative…'
+          : status === 'connecting'
+            ? 'Connexion…'
+            : status === 'offline'
+              ? state
+                ? 'Hors ligne — le chrono continue'
+                : 'Serveur injoignable — nouvelle tentative…'
+              : 'Arrete';
     if (status === 'offline') document.body.classList.add('show-hud');
     else if (status === 'online') setTimeout(() => document.body.classList.remove('show-hud'), 1500);
   });
 
   conn.addEventListener('remote-error', (event) => {
-    if (event.detail.code === 'no_room') {
+    if (event.detail.code !== 'no_room') return;
+    missingAttempts += 1;
+    if (state) {
+      // On a deja recu cette salle : le serveur vient de redemarrer. Le chrono
+      // continue sur l'horloge estimee et la connexion se retablira des que la
+      // regie aura recree la salle avec le meme code.
+      return;
+    }
+    // Jamais connecte : c'est sans doute une erreur de code. On propose la
+    // saisie apres quelques essais, sans cesser de reessayer en fond.
+    if (missingAttempts >= 3) {
       toast('Salle introuvable : ' + roomCode, 'error', 8000);
       showJoin();
     }

@@ -35,10 +35,16 @@ conn.addEventListener('status', (event) => {
   const status = event.detail.status;
   const chip = $('#status');
   chip.className = 'chip ' + (status === 'online' ? 'ok' : status === 'offline' ? 'danger' : '');
-  chip.textContent = status === 'online' ? 'En direct' : status === 'connecting' ? 'Connexion…' : 'Hors ligne';
+  chip.textContent =
+    status === 'online' ? 'En direct' : conn.missingRoom ? 'Salle indisponible' : status === 'connecting' ? 'Connexion…' : 'Hors ligne';
 });
 
 conn.addEventListener('remote-error', (event) => {
+  if (event.detail.code === 'no_room') {
+    // Redemarrage du serveur : on patiente, la reconnexion est automatique.
+    $('#live-title').textContent = 'Salle indisponible';
+    return;
+  }
   toast(event.detail.message || 'Erreur', 'error', 5000);
   $('#send').disabled = false;
 });

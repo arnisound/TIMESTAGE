@@ -1,16 +1,25 @@
-# Deploiement en un clic sur Render (https://render.com) : New > Blueprint,
-# puis pointer sur ce depot. Le plan gratuit suffit pour une salle.
+# Deploiement sur Render (https://render.com) : New > Blueprint, puis pointer
+# sur ce depot. Le plan gratuit suffit pour une salle.
+#
+# A savoir sur le plan gratuit :
+#  - le service s'endort apres 15 min sans trafic et met ~1 min a repartir ;
+#  - un redemarrage vide les salles (elles vivent en memoire). La regie propose
+#    alors de recreer la salle avec le meme code : les QR codes deja
+#    distribues et les ecrans ouverts se reconnectent tout seuls.
 services:
   - type: web
     name: timestage
     runtime: node
     plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
     buildCommand: npm ci
     startCommand: node server/index.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: '22'
-      # Le disque du plan gratuit est ephemere : on garde les salles en memoire.
+      # Le disque du plan gratuit est ephemere : inutile d'ecrire sur disque.
       - key: TIMESTAGE_DATA
         value: none

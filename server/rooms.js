@@ -16,6 +16,14 @@ const MAX_QUESTIONS = 400;
 const MAX_PRESETS = 20;
 const ROOM_TTL_MS = 48 * MS.h;
 
+const CODE_RE = new RegExp(`^[${CODE_ALPHABET}]{4,8}$`);
+
+/** Normalise un code fourni par un client ; null s'il est inexploitable. */
+export function normalizeCode(value) {
+  const code = String(value == null ? '' : value).trim().toUpperCase();
+  return CODE_RE.test(code) ? code : null;
+}
+
 export function makeCode(length = CODE_LENGTH) {
   const bytes = randomBytes(length);
   let out = '';
@@ -433,14 +441,28 @@ export class RoomStore {
     if (file) this.load();
   }
 
-  create(name = '') {
+  /**
+   * Cree une salle. `requestedCode` permet de reprendre un code precis apres
+   * un redemarrage du serveur : les QR codes deja distribues restent valables.
+   * @returns {{ok:true, room:object} | {ok:false, error:string, reason:string}}
+   */
+  create(name = '', requestedCode = null) {
+    if (requestedCode != null) {
+      const code = normalizeCode(requestedCode);
+      if (!code) return { ok: false, reason: 'invalid_code', error: 'Code de salle invalide.' };
+      if (this.rooms.has(code)) return { ok: false, reason: 'taken', error: 'Ce code est deja utilise.' };
+      const room = createRoomState(code, name);
+      this.rooms.set(code, room);
+      this.scheduleSave();
+      return { ok: true, room };
+    }
     let code = makeCode();
     let guard = 0;
     while (this.rooms.has(code) && guard++ < 50) code = makeCode();
     const room = createRoomState(code, name);
     this.rooms.set(code, room);
     this.scheduleSave();
-    return room;
+    return { ok: true, room };
   }
 
   get(code) {

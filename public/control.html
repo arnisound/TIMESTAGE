@@ -306,6 +306,28 @@
   </form>
 </dialog>
 
+<!-- Salle perdue (redemarrage du serveur) -->
+<dialog id="lost-dialog">
+  <div class="dialog-head"><h2>Salle indisponible</h2></div>
+  <div class="dialog-body stack">
+    <p style="margin:0">
+      La salle <strong id="lost-code"></strong> n'existe plus sur le serveur. C'est ce qui arrive apres un
+      redemarrage (mise en veille de l'hebergement gratuit, nouveau deploiement).
+    </p>
+    <p class="muted" style="margin:0">
+      <small>Le deroule, les reglages et les presets de cette fenetre sont conserves ici. En recreant la salle
+      avec le <strong>meme code</strong>, les QR codes deja distribues et les ecrans ouverts se reconnectent
+      tout seuls.</small>
+    </p>
+    <div class="empty hidden" id="lost-status"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" id="lost-ignore">Plus tard</button>
+    <button class="btn" id="lost-new">Nouvelle salle</button>
+    <button class="btn primary" id="lost-restore">Recreer la salle</button>
+  </div>
+</dialog>
+
 <!-- Cle de regie -->
 <dialog id="key-dialog">
   <form id="key-form">

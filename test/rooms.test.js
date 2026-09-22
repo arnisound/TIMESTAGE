@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText } from '../server/rooms.js';
+import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode } from '../server/rooms.js';
 import { MS } from '../shared/time.js';
 
-const newRoom = () => new RoomStore().create('Test');
+const newRoom = () => new RoomStore().create('Test').room;
 
 test('une salle recoit un code lisible et un jeton secret', () => {
   const room = newRoom();
@@ -143,7 +143,7 @@ test('room.reset remet le chrono et les marques a zero', () => {
 
 test('le magasin verifie le jeton et purge les vieilles salles', () => {
   const store = new RoomStore({ ttlMs: 1000 });
-  const room = store.create();
+  const room = store.create().room;
   assert.equal(store.isOwner(room, room.ownerToken), true);
   assert.equal(store.isOwner(room, 'faux-jeton'), false);
   assert.equal(store.isOwner(room, ''), false);
@@ -151,4 +151,44 @@ test('le magasin verifie le jeton et purge les vieilles salles', () => {
   assert.equal(store.cleanup(Date.now()), 0);
   assert.equal(store.cleanup(Date.now() + 5000), 1);
   assert.equal(store.get(room.code), null);
+});
+
+test('une salle peut etre recreee avec le meme code apres un redemarrage', () => {
+  const store = new RoomStore();
+  const first = store.create('Conference').room;
+  const code = first.code;
+
+  // Le serveur redemarre : la salle disparait.
+  store.delete(code);
+  assert.equal(store.get(code), null);
+
+  const again = store.create('Conference', code);
+  assert.equal(again.ok, true);
+  assert.equal(again.room.code, code, 'les QR codes deja distribues restent valables');
+  assert.notEqual(again.room.ownerToken, first.ownerToken, 'une nouvelle cle de regie est emise');
+});
+
+test('un code deja pris ou invalide est refuse', () => {
+  const store = new RoomStore();
+  const room = store.create().room;
+
+  const taken = store.create('', room.code);
+  assert.equal(taken.ok, false);
+  assert.equal(taken.reason, 'taken');
+
+  for (const bad of ['', 'AB', 'ABCDEFGHI', 'ABC-D', 'AIOU0', null]) {
+    const result = store.create('', bad);
+    if (bad === null) {
+      assert.equal(result.ok, true, 'null veut dire "code au hasard"');
+    } else {
+      assert.equal(result.ok, false, 'devrait refuser : ' + JSON.stringify(bad));
+      assert.equal(result.reason, 'invalid_code');
+    }
+  }
+});
+
+test('normalizeCode accepte la casse et les espaces', () => {
+  assert.equal(normalizeCode(' abcde '), 'ABCDE');
+  assert.equal(normalizeCode('a2c4e'), 'A2C4E');
+  assert.equal(normalizeCode('abc'), null);
 });

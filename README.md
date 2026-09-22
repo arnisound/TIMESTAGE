@@ -14,7 +14,8 @@ un code à 5 caractères qui vit en mémoire sur le serveur.
 > Le workflow fourni y publie la **version statique** — le chrono hors ligne,
 > complet et utilisable seul. Pour la régie et l'affichage sur deux appareils,
 > les QR codes et les questions du public, il faut faire tourner le serveur
-> Node quelque part. Tout est expliqué dans [Déploiement](#déploiement).
+> Node quelque part — [Render](#render--serveur-complet-gratuit) le fait
+> gratuitement en trois clics. Tout est expliqué dans [Déploiement](#déploiement).
 
 ## Démarrage
 
@@ -129,7 +130,7 @@ dérive entre les écrans.
 
 | Méthode | Route | Description |
 | --- | --- | --- |
-| `POST` | `/api/rooms` | Crée une salle, renvoie le code et la clé de régie |
+| `POST` | `/api/rooms` | Crée une salle, renvoie le code et la clé de régie. Un `code` peut être demandé pour reprendre une salle perdue après un redémarrage (409 s'il est déjà pris) |
 | `GET` | `/api/rooms/:code` | Existence et état public d'une salle |
 | `POST` | `/api/rooms/:code/questions` | Envoi d'une question (repli sans WebSocket) |
 | `GET` | `/api/qr.svg?data=…` | QR code en SVG |
@@ -184,20 +185,50 @@ Si vous hébergez aussi le serveur complet, définissez la variable de dépôt
 `TIMESTAGE_SERVER_URL` (Settings → Secrets and variables → Actions → Variables) :
 la page statique affichera un lien direct vers votre instance.
 
-### Serveur complet — pour le multi-appareils
+### Render — serveur complet, gratuit
 
-N'importe quel hébergeur Node 20+ qui accepte les WebSockets convient.
+Render exécute le serveur Node tel quel : **toutes les fonctions** marchent, y
+compris la régie et l'affichage sur deux appareils, les QR codes et les
+questions du public.
 
-**Docker :**
+1. Créer un compte sur [render.com](https://render.com) (aucune carte requise
+   pour le plan gratuit).
+2. **New → Blueprint**, choisir ce dépôt : le fichier `render.yaml` est détecté
+   et décrit tout le service.
+3. **Apply**. Le premier déploiement prend deux à trois minutes.
+4. L'application est en ligne sur `https://timestage-xxxx.onrender.com`.
+
+Pensez ensuite à renseigner cette URL dans la variable de dépôt
+`TIMESTAGE_SERVER_URL` (GitHub → Settings → Secrets and variables → Actions →
+Variables) : la page GitHub Pages affichera un lien vers votre instance.
+
+#### Ce qu'implique le plan gratuit
+
+| Contrainte | Conséquence | Ce que fait TimeStage |
+| --- | --- | --- |
+| Mise en veille après 15 min sans trafic | La première ouverture attend ~1 min | La page d'accueil réveille le serveur dès son ouverture et affiche « Le serveur se réveille… » au lieu de figer |
+| Le trafic WebSocket compte comme activité | Pas de mise en veille **pendant** un événement | Chaque écran envoie un battement toutes les 10 s |
+| Redémarrage = salles perdues (mémoire vive) | Le code de salle disparaîtrait | La régie propose de **recréer la salle avec le même code** et rejoue le déroulé, les réglages et les presets sauvegardés localement. Les QR codes déjà distribués restent valables et les écrans se reconnectent seuls |
+| Pendant la coupure | — | Les affichages **continuent de compter** sur l'horloge estimée ; rien ne se fige à l'écran |
+
+En pratique : ouvrez l'application cinq minutes avant de commencer, le temps
+que le serveur soit chaud, et tout se passe sans accroc. Pour éviter toute
+attente, un service de ping gratuit (UptimeRobot, cron-job.org) qui appelle
+`/api/health` toutes les dix minutes garde le service éveillé — sachant qu'un
+service actif en permanence consomme environ 730 des 750 heures gratuites
+mensuelles.
+
+### Autres hébergements
+
+**Docker**, partout ailleurs :
 
 ```bash
 docker build -t timestage .
 docker run -p 3000:3000 -v timestage-data:/app/data timestage
 ```
 
-**Render :** le fichier `render.yaml` est fourni — New → Blueprint, pointer sur
-le dépôt. Fonctionne aussi tel quel sur Railway, Fly.io, Koyeb, un VPS, etc.
-(`npm ci` puis `node server/index.js`).
+Sur un hébergement avec disque persistant, laissez `TIMESTAGE_DATA` par défaut :
+les salles survivent alors aux redémarrages.
 
 **Derrière un reverse proxy**, laissez passer la mise à niveau WebSocket sur `/ws` :
 

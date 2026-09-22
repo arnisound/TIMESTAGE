@@ -40,7 +40,17 @@ conn.addEventListener('status', (event) => {
   chip.className = 'chip ' + (status === 'online' ? 'ok' : status === 'offline' ? 'danger' : '');
   chip.querySelector('.dot').className = 'dot ' + (status === 'online' ? 'ok' : status === 'offline' ? 'danger' : 'warn');
   $('#status-text').textContent =
-    status === 'online' ? 'Connecte' : status === 'connecting' ? 'Connexion…' : status === 'offline' ? 'Reconnexion…' : 'Deconnecte';
+    status === 'online'
+      ? 'Connecte'
+      : conn.missingRoom
+        ? 'Salle perdue — recreer'
+        : status === 'connecting'
+          ? 'Connexion…'
+          : status === 'offline'
+            ? 'Reconnexion…'
+            : 'Deconnecte';
+  chip.style.cursor = conn.missingRoom ? 'pointer' : '';
+  chip.title = conn.missingRoom ? 'Recreer la salle avec le meme code' : '';
 });
 
 conn.addEventListener('remote-error', (event) => {
@@ -48,7 +58,7 @@ conn.addEventListener('remote-error', (event) => {
   if (errCode === 'forbidden') {
     askForKey('Cle de regie refusee.');
   } else if (errCode === 'no_room') {
-    toast('Cette salle n\'existe plus.', 'error', 10000);
+    offerRestore();
   } else {
     toast(message || 'Commande refusee', 'error');
   }
@@ -56,6 +66,7 @@ conn.addEventListener('remote-error', (event) => {
 
 conn.addEventListener('state', (event) => {
   state = event.detail;
+  saveSnapshot(state);
   render();
 });
 
@@ -446,6 +457,141 @@ for (const button of $$('[data-close]')) {
   button.addEventListener('click', () => button.closest('dialog')?.close());
 }
 $('#btn-help').addEventListener('click', () => $('#help-dialog').showModal());
+
+// --- Salle perdue : sauvegarde locale et retablissement ----------------------
+// L'hebergement gratuit redemarre (mise en veille, deploiement) et les salles
+// vivent en memoire. On garde donc ici de quoi rebatir la salle a l'identique,
+// avec le meme code : les QR codes distribues restent valables et les ecrans
+// ouverts se reconnectent tout seuls.
+const snapshotKey = 'timestage:snapshot:' + code;
+
+function saveSnapshot(current) {
+  if (!current) return;
+  const t = current.timer;
+  const snapshot = {
+    at: Date.now(),
+    name: current.session.name,
+    parts: current.session.parts,
+    autoAdvance: current.session.autoAdvance,
+    settings: current.settings,
+    presets: current.presets,
+    timer: {
+      mode: t.mode,
+      durationMs: t.durationMs,
+      format: t.format,
+      wrapUpMs: t.wrapUpMs,
+      finalMs: t.finalMs,
+      overrun: t.overrun,
+      title: t.title,
+      speaker: t.speaker,
+    },
+  };
+  try { localStorage.setItem(snapshotKey, JSON.stringify(snapshot)); } catch { /* mode prive */ }
+}
+
+function loadSnapshot() {
+  try { return JSON.parse(localStorage.getItem(snapshotKey) || 'null'); } catch { return null; }
+}
+
+let restoreDismissed = false;
+function offerRestore() {
+  const dialog = $('#lost-dialog');
+  if (dialog.open || restoreDismissed || $('#key-dialog').open) return;
+  $('#lost-code').textContent = code;
+  $('#lost-status').classList.add('hidden');
+  $('#lost-restore').disabled = false;
+  dialog.showModal();
+}
+
+/** Rejoue la session sauvegardee sur une salle fraichement creee. */
+function replaySnapshot(snapshot) {
+  if (!snapshot) return;
+  if (snapshot.parts?.length || snapshot.name) {
+    cmd('session.replace', { parts: snapshot.parts || [], name: snapshot.name || '' });
+  }
+  if (snapshot.autoAdvance) cmd('session.set', { autoAdvance: true });
+  if (snapshot.settings) cmd('settings.update', { patch: snapshot.settings });
+  if (snapshot.presets?.length) cmd('message.presets.set', { presets: snapshot.presets });
+  const t = snapshot.timer;
+  if (!t) return;
+  if (t.mode && t.mode !== 'countdown') cmd('timer.setMode', { mode: t.mode });
+  cmd('timer.setDuration', { ms: t.durationMs });
+  cmd('timer.setFormat', { format: t.format });
+  cmd('timer.setThresholds', { wrapUpMs: t.wrapUpMs, finalMs: t.finalMs, overrun: t.overrun });
+  if (t.title || t.speaker) cmd('timer.setTitle', { title: t.title, speaker: t.speaker });
+}
+
+async function recreateRoom({ keepCode }) {
+  const snapshot = loadSnapshot();
+  const status = $('#lost-status');
+  status.classList.remove('hidden');
+  status.textContent = keepCode ? 'Recreation de la salle…' : 'Creation d\'une nouvelle salle…';
+  $('#lost-restore').disabled = true;
+
+  try {
+    const response = await fetch('/api/rooms', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: snapshot?.name || '', ...(keepCode ? { code } : {}) }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 409) {
+      // Le code a ete repris entre-temps : la salle est peut-etre revenue.
+      status.textContent = 'Ce code est de nouveau pris. Tentative de reconnexion…';
+      conn.attempt = 0;
+      conn.connect();
+      return;
+    }
+    if (!response.ok) throw new Error(data.error || 'creation impossible');
+
+    try { localStorage.setItem('timestage:token:' + data.code, data.ownerToken); } catch { /* prive */ }
+
+    if (data.code !== code) {
+      // Nouveau code : on recharge la regie dessus, la session sera rejouee.
+      try { localStorage.setItem('timestage:snapshot:' + data.code, JSON.stringify(snapshot || {})); } catch { /* prive */ }
+      location.href = `/c/${data.code}#t=${encodeURIComponent(data.ownerToken)}&restore=1`;
+      return;
+    }
+
+    token = data.ownerToken;
+    try { localStorage.setItem(tokenKey, token); } catch { /* prive */ }
+    urls = roomUrls(code, token);
+    pendingRestore = snapshot;
+    conn.token = token;
+    conn.closedByUser = false;
+    conn.attempt = 0;
+    conn.connect();
+    $('#lost-dialog').close();
+  } catch (err) {
+    status.textContent = 'Echec : ' + err.message;
+    $('#lost-restore').disabled = false;
+  }
+}
+
+let pendingRestore = hashParams.get('restore') === '1' ? loadSnapshot() : null;
+conn.addEventListener('welcome', () => {
+  restoreDismissed = false;
+  if (!pendingRestore) return;
+  const snapshot = pendingRestore;
+  pendingRestore = null;
+  replaySnapshot(snapshot);
+  toast('Salle retablie. Les ecrans se reconnectent automatiquement.', 'ok', 7000);
+});
+
+$('#lost-restore').addEventListener('click', () => recreateRoom({ keepCode: true }));
+$('#lost-new').addEventListener('click', () => recreateRoom({ keepCode: false }));
+$('#lost-ignore').addEventListener('click', () => {
+  restoreDismissed = true;
+  $('#lost-dialog').close();
+  toast('Cliquez sur l\'etat de connexion pour recreer la salle.', '', 6000);
+});
+// L'indicateur de connexion redonne acces au retablissement.
+$('#status').addEventListener('click', () => {
+  if (!conn.missingRoom) return;
+  restoreDismissed = false;
+  offerRestore();
+});
 
 // --- Cle de regie manquante -------------------------------------------------
 function askForKey(reason = '') {

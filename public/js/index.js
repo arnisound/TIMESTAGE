@@ -46,26 +46,47 @@ function renderRecent() {
   }
 }
 
+// Sur un hebergement gratuit, le serveur s'endort apres quelques minutes sans
+// trafic et met jusqu'a une minute a repartir. On le reveille des l'ouverture
+// de la page, et on le dit clairement si l'attente se prolonge.
+let serverAwake = false;
+fetch('/api/health', { cache: 'no-store' })
+  .then((response) => { serverAwake = response.ok; })
+  .catch(() => {});
+
 $('#create-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = $('#create-btn');
+  const hint = $('#create-hint');
   button.disabled = true;
   button.textContent = 'Creation…';
+
+  // Message d'attente seulement si le serveur tarde vraiment.
+  const slow = setTimeout(() => {
+    if (serverAwake) return;
+    hint.classList.remove('hidden');
+    hint.textContent = 'Le serveur se reveille — cela peut prendre jusqu\'a une minute la premiere fois.';
+  }, 2500);
+
   try {
     const response = await fetch('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: $('#name').value.trim() }),
     });
-    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'creation impossible');
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'creation impossible');
     try { localStorage.setItem('timestage:token:' + data.code, data.ownerToken); } catch { /* mode prive */ }
     rememberRoom(data.code, $('#name').value.trim());
     location.href = `/c/${data.code}#t=${encodeURIComponent(data.ownerToken)}`;
   } catch (err) {
     toast('Impossible de creer la session : ' + err.message, 'error', 6000);
+    hint.classList.remove('hidden');
+    hint.textContent = 'Serveur injoignable. Le chrono hors ligne reste utilisable.';
     button.disabled = false;
     button.textContent = 'Creer la session';
+  } finally {
+    clearTimeout(slow);
   }
 });
 

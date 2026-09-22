@@ -85,7 +85,14 @@ app.get('/api/health', (req, res) => {
 app.post('/api/rooms', (req, res) => {
   const limit = rateLimit('create:' + clientIp(req), { limit: 30, windowMs: 60 * 60 * 1000 });
   if (!limit.ok) return res.status(429).json({ error: 'Trop de salles creees, reessayez plus tard.' });
-  const room = store.create(cleanText(req.body?.name, 80));
+
+  // `code` permet a une regie de reprendre son code apres un redemarrage du
+  // serveur : les QR codes deja distribues et les ecrans restent valables.
+  const result = store.create(cleanText(req.body?.name, 80), req.body?.code ?? null);
+  if (!result.ok) {
+    return res.status(result.reason === 'taken' ? 409 : 400).json({ error: result.error, reason: result.reason });
+  }
+  const { room } = result;
   res.status(201).json({
     code: room.code,
     ownerToken: room.ownerToken,

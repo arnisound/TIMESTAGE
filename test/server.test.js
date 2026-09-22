@@ -90,6 +90,39 @@ test('une salle inconnue renvoie 404', async () => {
   assert.equal((await fetch(base + '/api/rooms/ZZZZZ')).status, 404);
 });
 
+test('une salle peut etre recreee avec le meme code apres un redemarrage', async () => {
+  const room = await createRoom('Reprise');
+
+  // Code deja pris : refus, la salle en cours est protegee.
+  const conflict = await post('/api/rooms', { code: room.code });
+  assert.equal(conflict.status, 409);
+  assert.equal((await conflict.json()).reason, 'taken');
+
+  // Le serveur redemarre : on simule en creant sur un code libre.
+  const freeCode = 'ZK4MP';
+  const recreated = await post('/api/rooms', { name: 'Reprise', code: freeCode });
+  assert.equal(recreated.status, 201);
+  const data = await recreated.json();
+  assert.equal(data.code, freeCode);
+  assert.ok(data.ownerToken);
+
+  // Et la regie peut aussitot piloter la salle recreee.
+  const control = connect();
+  await control.open();
+  control.send({ t: 'hello', room: freeCode, role: 'control', token: data.ownerToken });
+  const welcome = await control.next((m) => m.t === 'welcome');
+  assert.equal(welcome.role, 'control');
+  control.close();
+});
+
+test('un code de salle invalide est refuse', async () => {
+  for (const code of ['AB', 'ABCDEFGHI', 'ABC-D', 'AIOU0']) {
+    const response = await post('/api/rooms', { code });
+    assert.equal(response.status, 400, code);
+    assert.equal((await response.json()).reason, 'invalid_code', code);
+  }
+});
+
 test('la regie pilote, l affichage suit', async () => {
   const room = await createRoom('Demo');
 

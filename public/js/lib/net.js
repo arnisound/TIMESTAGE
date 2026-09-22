@@ -16,6 +16,7 @@ export class RoomConnection extends EventTarget {
     this.samples = [];
     this.attempt = 0;
     this.closedByUser = false;
+    this.missingRoom = false; // la salle n'existe pas (encore) cote serveur
     this.pingTimer = null;
     this.reconnectTimer = null;
   }
@@ -72,6 +73,7 @@ export class RoomConnection extends EventTarget {
   handle(msg) {
     switch (msg.t) {
       case 'welcome':
+        this.missingRoom = false;
         this.applyTime(msg.serverTime);
         this.state = msg.state;
         this.role = msg.role || this.role;
@@ -97,10 +99,17 @@ export class RoomConnection extends EventTarget {
       }
       case 'error':
         this.dispatchEvent(new CustomEvent('remote-error', { detail: msg }));
-        if (msg.code === 'forbidden' || msg.code === 'no_room') {
+        if (msg.code === 'forbidden') {
+          // Jeton invalide : inutile d'insister.
           this.closedByUser = true;
           this.ws?.close();
           this.setStatus('idle', msg.code);
+        } else if (msg.code === 'no_room') {
+          // La salle peut revenir (redemarrage du serveur, salle recreee avec
+          // le meme code) : on ferme pour relancer le cycle de reconnexion.
+          this.missingRoom = true;
+          this.ws?.close();
+          this.setStatus('offline', 'no_room');
         }
         break;
       default:
