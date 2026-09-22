@@ -94,4 +94,4 @@ document.addEventListener('mousemove', wake);
 document.addEventListener('touchstart', wake, { passive: true });
 wake();
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

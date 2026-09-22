@@ -1,8 +1,8 @@
 // Rendu de la scene (fenetre d'affichage). Utilise aussi bien en ligne que par
 // le mode hors ligne : il suffit de lui passer un etat compatible.
 
-import { formatDuration, formatClock, timeOfDayMs, MS } from '/shared/time.js';
-import { readTimer } from '/shared/timer.js';
+import { formatDuration, formatClock, timeOfDayMs, MS } from '../../shared/time.js';
+import { readTimer } from '../../shared/timer.js';
 import { el, clear } from './dom.js';
 
 const PHASE_LABEL = {

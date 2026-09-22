@@ -1,29 +1,39 @@
 // Service worker TimeStage.
 // Objectif principal : garantir que le chrono hors ligne reste ouvrable meme
 // sans aucune connexion, une fois la page visitee.
+//
+// Le fichier vit a la racine du site, qu'il soit servi par le serveur Node (/)
+// ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
+// URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v1';
+const VERSION = 'timestage-v2';
+const BASE = new URL('./', self.location).pathname;
+const at = (path) => BASE + path;
+
+// Les routes propres au serveur Node (offline, display, ask) n'existent pas sur
+// un hebergement statique : les echecs de mise en cache y sont sans gravite.
 const SHELL = [
-  '/',
-  '/offline',
-  '/display',
-  '/ask',
-  '/css/base.css',
-  '/css/stage.css',
-  '/css/control.css',
-  '/js/index.js',
-  '/js/offline.js',
-  '/js/display.js',
-  '/js/ask.js',
-  '/js/lib/dom.js',
-  '/js/lib/net.js',
-  '/js/lib/stage.js',
-  '/js/lib/localroom.js',
-  '/shared/time.js',
-  '/shared/timer.js',
-  '/icons/icon.svg',
-  '/manifest.webmanifest',
-];
+  '',
+  'index.html',
+  'offline',
+  'display',
+  'ask',
+  'css/base.css',
+  'css/stage.css',
+  'css/control.css',
+  'js/index.js',
+  'js/offline.js',
+  'js/display.js',
+  'js/ask.js',
+  'js/lib/dom.js',
+  'js/lib/net.js',
+  'js/lib/stage.js',
+  'js/lib/localroom.js',
+  'shared/time.js',
+  'shared/timer.js',
+  'icons/icon.svg',
+  'manifest.webmanifest',
+].map(at);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -59,7 +69,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   // L'API et le WebSocket ne sont jamais mis en cache.
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws')) return;
+  if (url.pathname.startsWith(at('api/')) || url.pathname.startsWith(at('ws'))) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigation(request, url));
@@ -79,7 +89,9 @@ async function handleNavigation(request, url) {
     return (
       (await cache.match(request)) ||
       (await cache.match(normalizeRoute(url.pathname))) ||
-      (await cache.match('/offline')) ||
+      (await cache.match(at('offline'))) ||
+      (await cache.match(at('index.html'))) ||
+      (await cache.match(at(''))) ||
       new Response('Hors ligne', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } })
     );
   }
@@ -87,14 +99,15 @@ async function handleNavigation(request, url) {
 
 /** Les routes a code variable (/d/ABCDE) partagent la page de leur famille. */
 function normalizeRoute(pathname) {
-  if (pathname.startsWith('/d/')) return '/display';
-  if (pathname.startsWith('/q/')) return '/ask';
-  if (pathname.startsWith('/c/')) return '/offline';
-  return '/';
+  const route = pathname.startsWith(BASE) ? pathname.slice(BASE.length) : pathname.replace(/^\//, '');
+  if (route.startsWith('d/')) return at('display');
+  if (route.startsWith('q/')) return at('ask');
+  if (route.startsWith('c/')) return at('offline');
+  return at('');
 }
 
 function isCacheableRoute(pathname) {
-  return ['/', '/offline', '/display', '/ask'].includes(pathname);
+  return ['', 'index.html', 'offline', 'display', 'ask'].map(at).includes(pathname);
 }
 
 async function staleWhileRevalidate(request) {

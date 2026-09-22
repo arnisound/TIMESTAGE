@@ -3,8 +3,8 @@
 import { $, $$, el, clear, toast, copyText, qrUrl, download, pickFile, relativeTime } from './lib/dom.js';
 import { createStage } from './lib/stage.js';
 import { RoomConnection, roomUrls } from './lib/net.js';
-import { formatDuration, formatLabel, parseDuration, MS } from '/shared/time.js';
-import { readTimer } from '/shared/timer.js';
+import { formatDuration, formatLabel, parseDuration, MS } from '../shared/time.js';
+import { readTimer } from '../shared/timer.js';
 
 // --- Identification de la salle --------------------------------------------
 const params = new URLSearchParams(location.search);
@@ -513,4 +513,4 @@ window.addEventListener('beforeunload', (event) => {
   }
 });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

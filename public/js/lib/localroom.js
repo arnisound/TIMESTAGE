@@ -2,8 +2,8 @@
 // navigateur. Persistee dans localStorage et partagee entre les fenetres du
 // meme appareil par BroadcastChannel — donc sans aucun reseau.
 
-import * as T from '/shared/timer.js';
-import { DEFAULT_FORMAT } from '/shared/time.js';
+import * as T from '../../shared/timer.js';
+import { DEFAULT_FORMAT } from '../../shared/time.js';
 
 const STORAGE_KEY = 'timestage:offline:v1';
 const CHANNEL = 'timestage-offline';

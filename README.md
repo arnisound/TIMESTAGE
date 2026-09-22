@@ -9,6 +9,13 @@ réseau, directement dans le navigateur.
 Aucun compte, aucune base de données, aucune donnée personnelle : une salle est
 un code à 5 caractères qui vit en mémoire sur le serveur.
 
+> **GitHub Pages ne peut pas héberger l'application complète** : c'est un
+> hébergement de fichiers, il n'exécute pas Node, donc ni salles ni WebSocket.
+> Le workflow fourni y publie la **version statique** — le chrono hors ligne,
+> complet et utilisable seul. Pour la régie et l'affichage sur deux appareils,
+> les QR codes et les questions du public, il faut faire tourner le serveur
+> Node quelque part. Tout est expliqué dans [Déploiement](#déploiement).
+
 ## Démarrage
 
 ```bash
@@ -17,7 +24,7 @@ npm start           # http://localhost:3000
 ```
 
 En développement : `npm run dev` (rechargement à chaud du serveur).
-Tests : `npm test`.
+Tests : `npm test`. Version statique : `npm run build:static`.
 
 Variables d'environnement :
 
@@ -102,6 +109,7 @@ demande simplement de coller ce lien.
 ## Architecture
 
 ```
+scripts/build-static.mjs  Génère dist/ : version statique (chrono hors ligne)
 server/index.js      HTTP, API REST, WebSocket, service des fichiers statiques
 server/rooms.js      État des salles, commandes, modération, persistance
 shared/time.js       Formatage et analyse des durées (serveur + navigateur)
@@ -137,8 +145,61 @@ Les commandes portent des noms explicites : `timer.start`, `timer.setFormat`,
 
 ## Déploiement
 
-Node 20 ou plus. Derrière un reverse proxy, pensez à laisser passer la mise à
-niveau WebSocket sur `/ws` :
+TimeStage a deux moitiés : une partie **statique** (le chrono lui-même, qui
+tourne dans le navigateur) et une partie **serveur** (les salles, la
+synchronisation WebSocket, les QR codes, les questions du public).
+
+### GitHub Pages — version statique, sans serveur
+
+GitHub Pages ne sert que des fichiers : il ne peut pas exécuter Node, donc ni
+salles, ni WebSocket. En revanche il héberge très bien le **chrono hors ligne**,
+qui est complet à lui seul :
+
+- chronomètre, formats H/M/S/MS, modes, seuils, dépassement ;
+- messages à l'orateur et presets ;
+- déroulé local (parties, chargement, suivant/précédent) ;
+- seconde fenêtre d'affichage sur le même appareil (vidéoprojecteur, second
+  écran), synchronisée par `BroadcastChannel` ;
+- fonctionnement **sans aucune connexion** grâce au service worker.
+
+Ce qui demande le serveur : régie et affichage sur **deux appareils
+différents**, QR codes de partage, questions du public.
+
+Mise en route, une fois :
+
+1. **Settings → Pages → Build and deployment → Source : GitHub Actions.**
+2. Fusionner cette branche dans `main` (le workflow
+   `.github/workflows/pages.yml` se déclenche sur `main`), ou lancer
+   **Actions → GitHub Pages → Run workflow** sur la branche de votre choix.
+3. Le site est publié sur `https://<compte>.github.io/<dépôt>/`.
+
+Pour construire la même chose en local :
+
+```bash
+npm run build:static     # écrit dans dist/
+npx serve dist           # ou n'importe quel serveur de fichiers
+```
+
+Si vous hébergez aussi le serveur complet, définissez la variable de dépôt
+`TIMESTAGE_SERVER_URL` (Settings → Secrets and variables → Actions → Variables) :
+la page statique affichera un lien direct vers votre instance.
+
+### Serveur complet — pour le multi-appareils
+
+N'importe quel hébergeur Node 20+ qui accepte les WebSockets convient.
+
+**Docker :**
+
+```bash
+docker build -t timestage .
+docker run -p 3000:3000 -v timestage-data:/app/data timestage
+```
+
+**Render :** le fichier `render.yaml` est fourni — New → Blueprint, pointer sur
+le dépôt. Fonctionne aussi tel quel sur Railway, Fly.io, Koyeb, un VPS, etc.
+(`npm ci` puis `node server/index.js`).
+
+**Derrière un reverse proxy**, laissez passer la mise à niveau WebSocket sur `/ws` :
 
 ```nginx
 location / {

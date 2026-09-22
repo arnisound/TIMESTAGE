@@ -87,4 +87,4 @@ $('#join-control').addEventListener('click', () => {
 
 renderRecent();
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

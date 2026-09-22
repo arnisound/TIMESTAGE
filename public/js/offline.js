@@ -4,8 +4,8 @@
 import { $, $$, el, clear, toast, toggleFullscreen, keepAwake } from './lib/dom.js';
 import { createStage } from './lib/stage.js';
 import { LocalRoom } from './lib/localroom.js';
-import { formatDuration, formatLabel, parseDuration, MS } from '/shared/time.js';
-import { readTimer } from '/shared/timer.js';
+import { formatDuration, formatLabel, parseDuration, MS } from '../shared/time.js';
+import { readTimer } from '../shared/timer.js';
 
 const room = new LocalRoom();
 const isDisplayWindow = new URLSearchParams(location.search).get('view') === 'display';
@@ -189,7 +189,10 @@ function initControl() {
   $('#btn-blackout').addEventListener('click', () => apply('settings.update', { patch: { blackout: !room.state.settings.blackout } }));
   $('#btn-fullscreen').addEventListener('click', () => toggleFullscreen($('#preview-stage').parentElement));
   $('#btn-open-display').addEventListener('click', () => {
-    window.open('/offline?view=display', 'timestage-offline-display', 'noopener');
+    // Relatif a la page courante : fonctionne aussi bien sur /offline que sur
+    // un hebergement statique place dans un sous-dossier.
+    const url = new URL(location.pathname + '?view=display', location.href);
+    window.open(url, 'timestage-offline-display', 'noopener');
   });
 
   // --- Raccourcis -----------------------------------------------------------
@@ -236,7 +239,7 @@ function initControl() {
 }
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(
+  navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).then(
     () => { const chip = document.getElementById('cache-chip'); if (chip) chip.className = 'chip ok'; },
     () => { const chip = document.getElementById('cache-chip'); if (chip) chip.textContent = 'Cache indisponible'; }
   );

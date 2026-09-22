@@ -2,8 +2,8 @@
 
 import { $, el, clear, toast } from './lib/dom.js';
 import { RoomConnection } from './lib/net.js';
-import { formatDuration } from '/shared/time.js';
-import { readTimer } from '/shared/timer.js';
+import { formatDuration } from '../shared/time.js';
+import { readTimer } from '../shared/timer.js';
 
 const pathCode = location.pathname.match(/^\/q\/([A-Za-z0-9]{3,8})$/)?.[1];
 const params = new URLSearchParams(location.search);
@@ -126,4 +126,4 @@ function loop() {
 }
 requestAnimationFrame(loop);
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

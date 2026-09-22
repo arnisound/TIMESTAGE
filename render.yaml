@@ -1,0 +1,16 @@
+# Deploiement en un clic sur Render (https://render.com) : New > Blueprint,
+# puis pointer sur ce depot. Le plan gratuit suffit pour une salle.
+services:
+  - type: web
+    name: timestage
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      # Le disque du plan gratuit est ephemere : on garde les salles en memoire.
+      - key: TIMESTAGE_DATA
+        value: none
