@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { MS } from '../shared/time.js';
+import { EFFECT_NAMES, EFFECT_LAYERS, EFFECTS, DEFAULT_EFFECT_DURATION } from '../shared/effects.js';
 import * as T from '../shared/timer.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans I, O, 0, 1
@@ -171,6 +172,7 @@ export function createRoomState(code, name = '') {
     presets: defaultPresets(),
     questions: [],
     shownQuestionId: null,
+    effect: null, // { id, name, intensity, startedAt, durationMs, loop, layer }
     settings: defaultSettings(),
     logo: null, // { data: base64, type: 'image/png', version: n }
     access: null, // { salt, hash } quand la salle est protegee
@@ -496,6 +498,23 @@ export function applyCommand(room, name, payload = {}, now = Date.now()) {
       applySettings(room.settings, p.patch || {});
       break;
 
+    case 'effect.play': {
+      if (!EFFECT_NAMES.includes(p.name)) return { ok: false, error: 'Animation inconnue.' };
+      room.effect = {
+        id: makeId('fx'),
+        name: p.name,
+        intensity: clampInt(p.intensity, 0, 100, 60),
+        durationMs: clampInt(p.durationMs, MS.s, 10 * MS.m, DEFAULT_EFFECT_DURATION),
+        loop: !!p.loop,
+        layer: EFFECT_LAYERS.includes(p.layer) ? p.layer : EFFECTS[p.name].layer,
+        startedAt: now,
+      };
+      break;
+    }
+    case 'effect.stop':
+      room.effect = null;
+      break;
+
     case 'room.setAccessCode': {
       const result = setAccessCode(room, p.code, now);
       if (!result.ok) return result;
@@ -505,6 +524,7 @@ export function applyCommand(room, name, payload = {}, now = Date.now()) {
     case 'room.reset':
       room.timer = T.defaultTimer();
       room.message = defaultMessage();
+      room.effect = null;
       room.shownQuestionId = null;
       room.session.activeId = null;
       for (const part of room.session.parts) part.done = false;
@@ -573,6 +593,12 @@ export function tickRoom(room, now = Date.now()) {
   const m = room.message;
   if (m.visible && m.autoHideMs > 0 && now - m.sentAt >= m.autoHideMs) {
     m.visible = false;
+    changed = true;
+  }
+  // Une animation ponctuelle disparait de l'etat une fois jouee : inutile de
+  // la trainer, et un ecran qui se connecte apres coup ne la rejoue pas.
+  if (room.effect && !room.effect.loop && now - room.effect.startedAt > room.effect.durationMs + 3 * MS.s) {
+    room.effect = null;
     changed = true;
   }
   if (room.session.autoAdvance && room.timer.mode === 'countdown' && room.timer.running) {
@@ -695,6 +721,7 @@ export class RoomStore {
         room.settings = { ...defaultSettings(), ...(room.settings || {}) };
         room.logo = room.logo?.data ? room.logo : null;
         room.access = room.access?.hash ? room.access : null;
+        room.effect = room.effect?.name ? room.effect : null;
         room.message = { ...defaultMessage(), ...(room.message || {}) };
         room.questions = Array.isArray(room.questions) ? room.questions : [];
         room.presets = Array.isArray(room.presets) && room.presets.length ? room.presets : defaultPresets();

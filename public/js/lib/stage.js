@@ -4,6 +4,7 @@
 import { formatDuration, formatClock, timeOfDayMs, MS } from '../../shared/time.js';
 import { readTimer } from '../../shared/timer.js';
 import { el, clear } from './dom.js';
+import { createEffects } from './effects.js';
 
 const PHASE_LABEL = {
   idle: 'Pret',
@@ -32,6 +33,7 @@ export function createStage(root) {
   const questionNode = el('div', { class: 'stage-overlay stage-question hidden' });
   const flash = el('div', { class: 'stage-flash' });
   const logoNode = el('img', { class: 'stage-logo', alt: '', hidden: true });
+  const effectsCanvas = el('canvas', { class: 'stage-effects', 'aria-hidden': 'true' });
 
   root.append(
     el('div', { class: 'stage-top' }, [
@@ -44,8 +46,11 @@ export function createStage(root) {
     messageNode,
     questionNode,
     logoNode,
+    effectsCanvas,
     flash
   );
+
+  const effects = createEffects(effectsCanvas);
 
   // Le chrono occupe toute la place disponible dans sa zone : on mesure la
   // zone centrale, qui se reduit quand un message ou une question s'affiche.
@@ -211,6 +216,11 @@ export function createStage(root) {
 
     // --- Ecran noir --------------------------------------------------------
     root.classList.toggle('blackout', !!settings.blackout);
+
+    // --- Animations --------------------------------------------------------
+    const effect = state.effect && state.effect.name ? state.effect : null;
+    effectsCanvas.dataset.layer = effect?.layer === 'front' ? 'front' : 'back';
+    effects.update(settings.blackout ? null : effect, now);
 
     // --- Flash de fin ------------------------------------------------------
     const shouldFlash =

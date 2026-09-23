@@ -188,3 +188,18 @@ details.section > summary::marker { content: ''; }
   cursor: pointer;
 }
 .color-field span { font-size: .72rem; color: var(--muted); text-align: center; line-height: 1.1; }
+
+/* Animations ---------------------------------------------------------------- */
+.fx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.4rem, 1fr)); gap: .4rem; }
+.fx-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+  padding: .5rem .3rem;
+  font-size: .74rem;
+  line-height: 1.1;
+  text-align: center;
+}
+.fx-btn .fx-icon { font-size: 1.3rem; line-height: 1; }
+.fx-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }

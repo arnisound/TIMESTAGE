@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo, setAccessCode, checkAccess, rotateOwnerToken } from '../server/rooms.js';
 import { MS } from '../shared/time.js';
+import { EFFECT_NAMES } from '../shared/effects.js';
 
 const newRoom = () => new RoomStore().create('Test').room;
 
@@ -331,4 +332,70 @@ test('les couleurs du chrono sont validees, le vide vaut « couleur du theme »'
   // La chaine vide est acceptee : elle rend la main au theme.
   applySettings(settings, { colorNormal: '' });
   assert.equal(settings.colorNormal, '');
+});
+
+test('les animations sont validees, bornees et diffusees', () => {
+  const room = newRoom();
+  const now = Date.now();
+  assert.equal(room.effect, null);
+
+  assert.equal(applyCommand(room, 'effect.play', { name: 'licorne' }, now).ok, false, 'animation inconnue');
+  assert.equal(room.effect, null);
+
+  assert.equal(applyCommand(room, 'effect.play', { name: 'fire', intensity: 999, durationMs: 1 }, now).ok, true);
+  assert.equal(room.effect.name, 'fire');
+  assert.equal(room.effect.intensity, 100, 'intensite plafonnee');
+  assert.equal(room.effect.durationMs, MS.s, 'duree plancher');
+  assert.equal(room.effect.layer, 'back', 'plan par defaut du catalogue');
+  assert.equal(room.effect.startedAt, now);
+  assert.ok(room.effect.id, 'un identifiant permet de rejouer la meme animation');
+
+  // Rejouer la meme animation change l'identifiant : les ecrans repartent de zero.
+  const first = room.effect.id;
+  applyCommand(room, 'effect.play', { name: 'fire' }, now);
+  assert.notEqual(room.effect.id, first);
+
+  // L'etat diffuse porte bien l'animation.
+  assert.equal(viewerState(room).effect.name, 'fire');
+});
+
+test('une animation ponctuelle sort de l etat, une boucle y reste', () => {
+  const room = newRoom();
+  const now = Date.now();
+
+  applyCommand(room, 'effect.play', { name: 'confetti', durationMs: 5000 }, now);
+  assert.equal(tickRoom(room, now + 4000), false, 'encore en cours');
+  assert.equal(tickRoom(room, now + 9000), true, 'nettoyee apres la fin');
+  assert.equal(room.effect, null);
+
+  applyCommand(room, 'effect.play', { name: 'flood', durationMs: 5000, loop: true }, now);
+  assert.equal(tickRoom(room, now + 3600_000), false, 'une boucle ne s arrete pas toute seule');
+  assert.equal(room.effect.name, 'flood');
+
+  assert.equal(applyCommand(room, 'effect.stop', {}, now).ok, true);
+  assert.equal(room.effect, null);
+});
+
+test('le plan de l animation peut etre force', () => {
+  const room = newRoom();
+  applyCommand(room, 'effect.play', { name: 'fire', layer: 'front' });
+  assert.equal(room.effect.layer, 'front');
+  applyCommand(room, 'effect.play', { name: 'confetti', layer: 'nimporte' });
+  assert.equal(room.effect.layer, 'front', 'plan par defaut des confettis');
+});
+
+test('room.reset coupe l animation en cours', () => {
+  const room = newRoom();
+  applyCommand(room, 'effect.play', { name: 'rain', loop: true });
+  applyCommand(room, 'room.reset', {});
+  assert.equal(room.effect, null);
+});
+
+test('le catalogue d animations est coherent', () => {
+  assert.ok(EFFECT_NAMES.length >= 8);
+  const room = newRoom();
+  for (const name of EFFECT_NAMES) {
+    assert.equal(applyCommand(room, 'effect.play', { name }).ok, true, 'animation refusee : ' + name);
+    assert.ok(['back', 'front'].includes(room.effect.layer), 'plan invalide pour ' + name);
+  }
 });

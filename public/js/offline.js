@@ -6,6 +6,7 @@ import { createStage } from './lib/stage.js';
 import { LocalRoom } from './lib/localroom.js';
 import { formatDuration, formatLabel, parseDuration, MS } from '../shared/time.js';
 import { readTimer } from '../shared/timer.js';
+import { EFFECTS } from '../shared/effects.js';
 
 // Couleurs par defaut de chaque theme : elles amorcent les selecteurs, qui
 // ne savent pas representer « aucune couleur choisie ».
@@ -88,6 +89,7 @@ function initControl() {
     $('#theme-select').value = state.settings.theme || 'brand';
     renderTuning(state);
     renderColors(state.settings);
+    renderEffect(state.effect);
     for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
     $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
     $('#message-state').textContent = state.message.visible ? "A l'ecran" : 'Masque';
@@ -305,6 +307,43 @@ function initControl() {
 
   $('#btn-logo-upload').addEventListener('click', pickLogo);
   $('#btn-logo-remove').addEventListener('click', () => apply('logo.set', { dataUrl: '' }));
+
+  // --- Animations ------------------------------------------------------------
+  const fxGrid = $('#fx-grid');
+  for (const [name, effect] of Object.entries(EFFECTS)) {
+    fxGrid.append(
+      el('button', {
+        class: 'btn fx-btn',
+        type: 'button',
+        dataset: { fx: name },
+        title: effect.label,
+        onclick: () => apply('effect.play', {
+          name,
+          intensity: Number($('#fx-intensity').value),
+          durationMs: Number($('#fx-duration').value),
+          loop: $('#fx-loop').checked,
+        }),
+      }, [
+        el('span', { class: 'fx-icon', text: effect.icon, 'aria-hidden': 'true' }),
+        el('span', { text: effect.label }),
+      ])
+    );
+  }
+  $('#fx-intensity').addEventListener('input', (event) => {
+    $('#fx-intensity-out').textContent = event.target.value + ' %';
+  });
+  $('#btn-fx-stop').addEventListener('click', () => apply('effect.stop', {}));
+
+  function renderEffect(current) {
+    const chip = $('#effect-state');
+    const active = current?.name ? EFFECTS[current.name] : null;
+    chip.textContent = active ? active.label + (current.loop ? ' (boucle)' : '') : 'Aucune';
+    chip.className = 'chip ' + (active ? 'accent' : '');
+    for (const button of $$('.fx-btn')) {
+      button.setAttribute('aria-pressed', String(!!active && button.dataset.fx === current.name));
+    }
+    $('#btn-fx-stop').disabled = !active;
+  }
 
   // --- Couleurs du chrono ---------------------------------------------------
 

@@ -4,6 +4,7 @@
 
 import * as T from '../../shared/timer.js';
 import { DEFAULT_FORMAT } from '../../shared/time.js';
+import { EFFECTS, DEFAULT_EFFECT_DURATION } from '../../shared/effects.js';
 
 const STORAGE_KEY = 'timestage:offline:v1';
 const CHANNEL = 'timestage-offline';
@@ -20,6 +21,7 @@ function defaultState() {
     session: { name: 'Session hors ligne', autoAdvance: false, activeId: null, parts: [] },
     questions: [],
     shownQuestionId: null,
+    effect: null,
     logoUrl: '', // data URL : le logo vit dans ce navigateur
     settings: {
       showTitle: true,
@@ -197,6 +199,19 @@ export class LocalRoom extends EventTarget {
       }
 
       case 'settings.update': Object.assign(s.settings, p.patch || {}); break;
+      case 'effect.play':
+        if (!EFFECTS[p.name]) break;
+        s.effect = {
+          id: uid(),
+          name: p.name,
+          intensity: Math.min(100, Math.max(0, Number(p.intensity) || 60)),
+          durationMs: Math.max(1000, Number(p.durationMs) || DEFAULT_EFFECT_DURATION),
+          loop: !!p.loop,
+          layer: p.layer === 'front' || p.layer === 'back' ? p.layer : EFFECTS[p.name].layer,
+          startedAt: now,
+        };
+        break;
+      case 'effect.stop': s.effect = null; break;
       case 'logo.set':
         s.logoUrl = String(p.dataUrl || '');
         s.settings.logoMode = s.logoUrl ? 'custom' : 'none';
@@ -218,6 +233,11 @@ export class LocalRoom extends EventTarget {
     let changed = false;
     if (s.message.visible && s.message.autoHideMs > 0 && Date.now() - s.message.sentAt >= s.message.autoHideMs) {
       s.message.visible = false;
+      changed = true;
+    }
+    // Une animation ponctuelle sort de l'etat une fois jouee.
+    if (s.effect && !s.effect.loop && Date.now() - s.effect.startedAt > s.effect.durationMs + 3000) {
+      s.effect = null;
       changed = true;
     }
     if (changed) {

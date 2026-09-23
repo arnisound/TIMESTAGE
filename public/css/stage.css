@@ -178,6 +178,23 @@
 .stage-question[data-size="md"] .q-text { font-size: clamp(1rem, 3.4vmin, 3rem); }
 .stage-question[data-size="sm"] .q-text { font-size: clamp(.9rem, 2.6vmin, 2.2rem); }
 
+/* Animations --------------------------------------------------------------- */
+.stage-effects {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0; /* derriere le chrono par defaut : les chiffres restent lisibles */
+}
+.stage-effects[data-layer="front"] { z-index: 5; }
+.stage.blackout .stage-effects { visibility: hidden; }
+/* Le chrono, ses textes et les bandeaux passent devant la couche de fond :
+   sans cela, un canvas positionne (meme en z-index 0) recouvrirait le contenu
+   non positionne du flux. */
+.stage-main, .stage-top, .stage-bottom, .stage-progress { position: relative; z-index: 1; }
+.stage-message, .stage-question { position: relative; z-index: 2; }
+
 /* Logo de l'evenement ----------------------------------------------------- */
 .stage-logo {
   position: absolute;

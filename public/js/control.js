@@ -5,6 +5,7 @@ import { createStage } from './lib/stage.js';
 import { RoomConnection, roomUrls } from './lib/net.js';
 import { formatDuration, formatLabel, parseDuration, MS } from '../shared/time.js';
 import { readTimer } from '../shared/timer.js';
+import { EFFECTS } from '../shared/effects.js';
 
 // --- Identification de la salle --------------------------------------------
 const params = new URLSearchParams(location.search);
@@ -111,6 +112,7 @@ function render() {
   $('#theme-select').value = state.settings.theme || 'brand';
   renderTuning(state.settings);
   renderColors(state.settings);
+  renderEffect(state.effect);
   renderSecurity();
   for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
   $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
@@ -460,6 +462,59 @@ $('#btn-tune-reset').addEventListener('click', () => {
 
 const LOGO_KEY = 'timestage:logo:' + code;
 const ACCESS_KEY = 'timestage:access:' + code;
+
+// --- Animations -------------------------------------------------------------
+let fxLayer = 'auto';
+
+const fxGrid = $('#fx-grid');
+for (const [name, effect] of Object.entries(EFFECTS)) {
+  fxGrid.append(
+    el('button', {
+      class: 'btn fx-btn',
+      type: 'button',
+      dataset: { fx: name },
+      title: effect.label,
+      onclick: () => playEffect(name),
+    }, [
+      el('span', { class: 'fx-icon', text: effect.icon, 'aria-hidden': 'true' }),
+      el('span', { text: effect.label }),
+    ])
+  );
+}
+
+function playEffect(name) {
+  cmd('effect.play', {
+    name,
+    intensity: Number($('#fx-intensity').value),
+    durationMs: Number($('#fx-duration').value),
+    loop: $('#fx-loop').checked,
+    ...(fxLayer === 'auto' ? {} : { layer: fxLayer }),
+  });
+}
+
+function renderEffect(current) {
+  const chip = $('#effect-state');
+  const active = current?.name ? EFFECTS[current.name] : null;
+  chip.textContent = active ? active.label + (current.loop ? ' (boucle)' : '') : 'Aucune';
+  chip.className = 'chip ' + (active ? 'accent' : '');
+  for (const button of $$('.fx-btn')) {
+    button.setAttribute('aria-pressed', String(!!active && button.dataset.fx === current.name));
+  }
+  $('#btn-fx-stop').disabled = !active;
+}
+
+$('#fx-intensity').addEventListener('input', (event) => {
+  $('#fx-intensity-out').textContent = event.target.value + ' %';
+});
+for (const button of $$('#fx-layer-seg button')) {
+  button.addEventListener('click', () => {
+    fxLayer = button.dataset.layer;
+    for (const other of $$('#fx-layer-seg button')) {
+      other.setAttribute('aria-pressed', String(other === button));
+    }
+  });
+}
+$('#btn-fx-stop').addEventListener('click', () => cmd('effect.stop', {}));
 
 // --- Sections de la regie ---------------------------------------------------
 // L'etat plie/deplie suit l'utilisateur d'une session a l'autre.

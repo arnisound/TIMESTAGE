@@ -331,6 +331,46 @@
       </form>
     </details>
 
+    <details class="panel section" data-section="animations">
+      <summary class="panel-head">
+        <h2 class="panel-title">Animations</h2>
+        <span class="chip" id="effect-state">Aucune</span>
+      </summary>
+      <div class="fx-grid" id="fx-grid"></div>
+      <div class="tune-row">
+        <label for="fx-intensity">Intensite <output id="fx-intensity-out">60 %</output></label>
+        <input type="range" id="fx-intensity" min="10" max="100" step="5" value="60">
+      </div>
+      <div class="field-row" style="margin-top:.5rem">
+        <div class="field" style="width:7.5rem">
+          <label for="fx-duration">Duree</label>
+          <select id="fx-duration">
+            <option value="5000">5 s</option>
+            <option value="12000" selected>12 s</option>
+            <option value="30000">30 s</option>
+            <option value="60000">1 min</option>
+            <option value="300000">5 min</option>
+          </select>
+        </div>
+        <div class="field grow">
+          <label>Plan</label>
+          <div class="seg" id="fx-layer-seg" role="group" aria-label="Plan de l'animation">
+            <button type="button" data-layer="auto" aria-pressed="true">Auto</button>
+            <button type="button" data-layer="back" aria-pressed="false">Fond</button>
+            <button type="button" data-layer="front" aria-pressed="false">Devant</button>
+          </div>
+        </div>
+      </div>
+      <div class="row tight" style="margin-top:.6rem">
+        <label class="check"><input type="checkbox" id="fx-loop"> En boucle</label>
+        <button class="btn danger" id="btn-fx-stop" style="margin-left:auto">Arreter</button>
+      </div>
+      <p class="muted" style="margin:.5rem 0 0"><small>
+        Les animations s'affichent aussi dans la fenetre video : sur fond transparent,
+        elles s'incrustent directement sur l'image.
+      </small></p>
+    </details>
+
     <details class="panel section" data-section="securite">
       <summary class="panel-head">
         <h2 class="panel-title">Securite de la session</h2>

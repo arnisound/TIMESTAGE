@@ -74,6 +74,20 @@ demande simplement de coller ce lien.
 - Presets modifiables (« Merci de conclure », « Parlez plus fort »…).
 - Message libre, quatre styles, clignotement, masquage automatique.
 
+**Animations de scène**
+- Huit effets envoyés depuis la régie : **flammes, pluie, inondation, vent,
+  plantes qui poussent, confettis, neige, fumée**.
+- Intensité, durée et lecture en boucle réglables ; plan **fond** (derrière le
+  chrono, qui reste lisible) ou **premier plan**.
+- Rendus sur un canvas, donc ils s'incrustent aussi dans la **fenêtre vidéo** :
+  sur fond transparent, les flammes passent directement sur l'image du
+  mélangeur.
+- Un effet ponctuel disparaît tout seul à la fin de sa durée : un écran qui se
+  connecte après coup ne le rejoue pas.
+- Le nombre de particules est plafonné et le pas de temps borné, pour que le
+  chrono ne saccade jamais et qu'un onglet revenu au premier plan ne rattrape
+  pas son retard d'un coup.
+
 **Chrono vidéo (incrustation)**
 - `/k/CODE` affiche **le chrono seul sur fond transparent** : à ouvrir comme
   source navigateur dans OBS, vMix ou tout mélangeur qui gère l'alpha.
@@ -186,7 +200,7 @@ Serveur → client : `welcome`, `state`, `pong`, `ack`, `key`, `error`.
 
 Les commandes portent des noms explicites : `timer.start`, `timer.setFormat`,
 `session.load`, `message.send`, `question.show`, `settings.update`,
-`room.setAccessCode`, `room.rotateKey`…
+`room.setAccessCode`, `room.rotateKey`, `effect.play`, `effect.stop`…
 
 ## Déploiement
 
