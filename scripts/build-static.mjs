@@ -1,3 +1,9 @@
+/*!
+ * TimeStage — chronometre de scene
+ * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * Logiciel proprietaire : toute reproduction, modification, distribution ou
+ * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
+ */
 // Construit la version statique de TimeStage (GitHub Pages, Netlify, S3…).
 //
 // Un hebergement statique ne peut pas faire tourner le serveur Node : pas de
@@ -37,11 +43,21 @@ for (const file of ['js/control.js', 'js/index.js', 'js/display.js', 'js/ask.js'
   fs.rmSync(path.join(OUT, file), { force: true });
 }
 
+// --- Mentions legales ------------------------------------------------------
+// La page part telle quelle, chemins rendus relatifs comme le reste.
+{
+  let legal = fs.readFileSync(path.join(ROOT, 'public', 'legal.html'), 'utf8');
+  legal = legal.replace(/(href|src)="\/(css|js|icons|manifest)/g, '$1="$2');
+  legal = legal.replace('href="/offline"', 'href="./"').replace('href="/"', 'href="./"');
+  fs.writeFileSync(path.join(OUT, 'legal.html'), legal);
+}
+
 // --- Page d'accueil = le chrono hors ligne ---------------------------------
 let html = fs.readFileSync(path.join(ROOT, 'public', 'offline.html'), 'utf8');
 
 // Chemins absolus -> relatifs, pour tenir dans un sous-dossier (/mon-depot/).
 html = html.replace(/(href|src)="\/(css|js|icons|manifest)/g, '$1="$2');
+html = html.replace('href="/legal"', 'href="legal.html"');
 
 html = html
   .replace('<title>Chrono hors ligne — TimeStage</title>', '<title>TimeStage — chronometre de scene</title>')

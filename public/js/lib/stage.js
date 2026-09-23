@@ -1,3 +1,9 @@
+/*!
+ * TimeStage — chronometre de scene
+ * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * Logiciel proprietaire : toute reproduction, modification, distribution ou
+ * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
+ */
 // Rendu de la scene (fenetre d'affichage). Utilise aussi bien en ligne que par
 // le mode hors ligne : il suffit de lui passer un etat compatible.
 

@@ -1,3 +1,9 @@
+/*!
+ * TimeStage — chronometre de scene
+ * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * Logiciel proprietaire : toute reproduction, modification, distribution ou
+ * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
+ */
 // Serveur TimeStage : fichiers statiques, API REST et synchronisation WebSocket.
 
 import http from 'node:http';
@@ -76,6 +82,7 @@ app.get('/control', page('control.html'));
 app.get('/display', page('display.html'));
 app.get('/ask', page('ask.html'));
 app.get('/offline', page('offline.html'));
+app.get('/legal', page('legal.html'));
 // URL courtes : QR codes plus lisibles.
 app.get('/c/:code', page('control.html'));
 app.get('/d/:code', page('display.html'));

@@ -67,6 +67,15 @@ test('le service worker se cale sur sa propre adresse', () => {
   assert.equal(/'\/css\//.test(sw), false, 'chemin absolu dans le service worker');
 });
 
+test('la version statique embarque les mentions legales', () => {
+  assert.ok(fs.existsSync(path.join(OUT, 'legal.html')), 'legal.html manquant');
+  const legal = fs.readFileSync(path.join(OUT, 'legal.html'), 'utf8');
+  assert.equal(/(href|src)="\/(css|js|icons)/.test(legal), false, 'chemin absolu dans legal.html');
+  assert.match(legal, /108 233 578 00013/);
+  const index = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
+  assert.match(index, /href="legal\.html"/, 'la page statique doit mener aux mentions');
+});
+
 test('la page statique annonce ce qui demande un serveur', () => {
   const html = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
   assert.match(html, /Version statique/);

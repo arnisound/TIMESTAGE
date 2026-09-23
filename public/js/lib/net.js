@@ -1,3 +1,9 @@
+/*!
+ * TimeStage — chronometre de scene
+ * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * Logiciel proprietaire : toute reproduction, modification, distribution ou
+ * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
+ */
 // Client WebSocket : reconnexion automatique et synchronisation d'horloge avec
 // le serveur (indispensable pour que toutes les fenetres affichent la meme
 // valeur a quelques millisecondes pres).

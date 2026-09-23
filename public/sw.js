@@ -1,3 +1,9 @@
+/*!
+ * TimeStage — chronometre de scene
+ * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * Logiciel proprietaire : toute reproduction, modification, distribution ou
+ * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
+ */
 // Service worker TimeStage.
 // Objectif principal : garantir que le chrono hors ligne reste ouvrable meme
 // sans aucune connexion, une fois la page visitee.
@@ -6,7 +12,7 @@
 // ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
 // URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v6';
+const VERSION = 'timestage-v7';
 const BASE = new URL('./', self.location).pathname;
 const at = (path) => BASE + path;
 
@@ -16,6 +22,8 @@ const SHELL = [
   '',
   'index.html',
   'offline',
+  'legal',
+  'legal.html',
   'display',
   'ask',
   'css/base.css',

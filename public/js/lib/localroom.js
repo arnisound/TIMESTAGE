@@ -1,3 +1,9 @@
+/*!
+ * TimeStage — chronometre de scene
+ * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * Logiciel proprietaire : toute reproduction, modification, distribution ou
+ * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
+ */
 // Salle locale : meme forme d'etat que le serveur, mais entierement dans le
 // navigateur. Persistee dans localStorage et partagee entre les fenetres du
 // meme appareil par BroadcastChannel — donc sans aucun reseau.

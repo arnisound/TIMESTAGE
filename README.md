@@ -1,5 +1,9 @@
 # TimeStage
 
+**© 2026 Arnisound Tools — Théo Arnissolle. Tous droits réservés.**
+Logiciel propriétaire : le code est visible, il n'est pas libre de droits.
+Voir [LICENSE](LICENSE) et [Licence et propriété](#licence-et-propriété).
+
 Chronomètre de scène pour conférences, cultes, meetups, remises de prix : une
 **fenêtre de régie**, une **fenêtre d'affichage**, le partage par **QR code**,
 des **messages à l'orateur**, les **questions du public modérées**, un
@@ -327,6 +331,30 @@ ci-dessus : la marque sans texte se reconstruit en retirant les groupes `<text>`
 du SVG source (en conservant `fill-rule:evenodd` sur la racine, sinon les
 anneaux se remplissent en disques pleins).
 
-## Licence
+## Licence et propriété
 
-MIT — voir [LICENSE](LICENSE).
+**TimeStage est un logiciel propriétaire. Tous droits réservés.**
+
+Éditeur : **Arnisound Tools**, nom commercial de l'entreprise individuelle
+Théo Arnissolle, entrepreneur individuel (micro-entreprise),
+Castelnau-le-Lez, France. SIRET : 108 233 578 00013.
+Contact : <contact@arnisoundtools.com>
+
+Le code source est publié pour consultation, étude personnelle et évaluation.
+**Ce n'est pas un logiciel open source** : sans autorisation écrite préalable,
+il ne peut être copié, modifié, redistribué, revendu, hébergé ni exploité, en
+tout ou partie. Les noms « TimeStage » et « Arnisound Tools », le logo et
+l'identité visuelle sont également protégés.
+
+Les conditions complètes figurent dans [LICENSE](LICENSE), et les mentions
+légales du service en ligne sont servies sur la route `/legal`
+([source](public/legal.html)).
+
+Pour une licence commerciale — intégration, hébergement, marque blanche —
+écrivez à <contact@arnisoundtools.com>.
+
+### Avant une mise en ligne publique
+
+La page `/legal` contient un encadré **« À compléter »** : la loi française
+impose d'y indiquer le nom, l'adresse et le téléphone de votre hébergeur.
+Renseignez-les avant d'ouvrir le service au public.
