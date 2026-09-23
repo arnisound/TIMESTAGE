@@ -23,9 +23,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(ROOT, process.argv[2] || 'dist');
 const SERVER_URL = process.env.TIMESTAGE_SERVER_URL || '';
-const REPO_URL = process.env.TIMESTAGE_REPO_URL || 'https://github.com/arnisound/timestage';
-// Ancre GitHub du titre « ## Déploiement » du README.
-const DEPLOY_ANCHOR = '#d%C3%A9ploiement';
+// Logiciel proprietaire : la page publique ne renvoie pas vers le depot.
+// Sans instance complete connue, on oriente vers l'editeur.
+const CONTACT_URL = 'mailto:contact@arnisoundtools.com';
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
@@ -65,16 +65,16 @@ html = html
     '<a class="btn sm ghost" href="/">Mode connecte</a>',
     SERVER_URL
       ? `<a class="btn sm ghost" href="${SERVER_URL}" rel="noopener">Version complete</a>`
-      : `<a class="btn sm ghost" href="${REPO_URL + DEPLOY_ANCHOR}" rel="noopener">Version complete</a>`
+      : '<a class="btn sm ghost" href="legal.html">Mentions legales</a>'
   );
 
-const link = SERVER_URL || REPO_URL + DEPLOY_ANCHOR;
-const linkLabel = SERVER_URL ? "ouvrir l'instance complete" : 'voir le depot';
+const link = SERVER_URL || CONTACT_URL;
+const linkLabel = SERVER_URL ? "ouvrir l'instance complete" : 'nous contacter';
 const note = `  <div class="static-note">
     <strong>Version statique.</strong> Le chronometre, les formats, les messages, le deroule et la seconde
     fenetre d'affichage fonctionnent ici sans serveur, meme sans connexion.
-    Le partage multi-appareils (QR code, questions du public, regie a distance) demande le serveur Node :
-    <a href="${link}" rel="noopener">${linkLabel}</a>.
+    Le partage multi-appareils (QR code, questions du public, regie a distance) demande l'instance
+    complete : <a href="${link}" rel="noopener">${linkLabel}</a>.
   </div>
 `;
 html = html.replace('  <main class="offline-layout">', note + '  <main class="offline-layout">');

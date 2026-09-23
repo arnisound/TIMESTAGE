@@ -88,3 +88,10 @@ test('le code source porte l entete de propriete', () => {
 test('le serveur expose la route des mentions legales', () => {
   assert.match(read('server/index.js'), /app\.get\('\/legal'/);
 });
+
+test('les pages publiques ne renvoient pas vers le depot de code', () => {
+  // Le logiciel est proprietaire : l'interface n'invite pas a recuperer le code.
+  for (const page of ['public/index.html', 'public/ask.html', 'public/offline.html', 'public/control.html']) {
+    assert.equal(/github\.com/i.test(read(page)), false, 'lien vers le depot dans ' + page);
+  }
+});

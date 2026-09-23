@@ -76,6 +76,14 @@ test('la version statique embarque les mentions legales', () => {
   assert.match(index, /href="legal\.html"/, 'la page statique doit mener aux mentions');
 });
 
+test('la version statique ne renvoie pas vers le depot', () => {
+  for (const file of ['index.html', '404.html', 'legal.html']) {
+    const content = fs.readFileSync(path.join(OUT, file), 'utf8');
+    assert.equal(/github\.com/i.test(content), false, 'lien vers le depot dans ' + file);
+  }
+  assert.match(fs.readFileSync(path.join(OUT, 'index.html'), 'utf8'), /mailto:contact@arnisoundtools\.com/);
+});
+
 test('la page statique annonce ce qui demande un serveur', () => {
   const html = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
   assert.match(html, /Version statique/);
