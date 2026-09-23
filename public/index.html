@@ -20,10 +20,24 @@
 <link rel="stylesheet" href="/css/base.css">
 <style>
   .wrap { max-width: 62rem; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
-  .hero { display: grid; gap: 1rem; padding: 2.5rem 0 1.5rem; }
-  .hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); letter-spacing: -.02em; }
-  .hero-logo { width: clamp(88px, 14vw, 132px); height: auto; margin-bottom: -.4rem; }
-  .hero p.lead { font-size: 1.05rem; color: var(--muted); max-width: 42rem; }
+  /* Le titre occupe la colonne de gauche, le logo remplit celle de droite :
+     plus de vide entre les deux sur un grand ecran. */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(1rem, 5vw, 3.5rem);
+    padding: 2.5rem 0 1.5rem;
+  }
+  .hero-text { display: grid; gap: 1rem; }
+  .hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); letter-spacing: -.02em; margin: 0; }
+  .hero p.lead { font-size: 1.05rem; color: var(--muted); max-width: 40rem; margin: 0; }
+  .hero-logo { width: clamp(150px, 24vw, 320px); height: auto; justify-self: end; }
+  @media (max-width: 760px) {
+    /* En colonne, le logo repasse au-dessus du titre. */
+    .hero { grid-template-columns: 1fr; gap: 1rem; padding-top: 1.5rem; }
+    .hero-logo { order: -1; justify-self: start; width: clamp(104px, 30vw, 150px); }
+  }
   .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .8rem; margin-top: .5rem; }
   .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 2rem; }
   .feature h3 { margin-bottom: .2rem; }
@@ -44,14 +58,18 @@
   </header>
 
   <section class="hero">
-    <img src="/icons/logo.png" alt="TimeStage" class="hero-logo" width="132" height="132">
-    <h1>Le chronometre de scene, de la regie a l'ecran.</h1>
-    <p class="lead">
-      Une fenetre de regie, un affichage plein ecran, et tout ce qu'il faut autour :
-      partage par QR code, messages a l'orateur, questions du public moderees,
-      deroule de session et un mode hors ligne qui fonctionne sans reseau.
-    </p>
+    <div class="hero-text">
+      <h1>Le chronometre de scene, de la regie a l'ecran.</h1>
+      <p class="lead">
+        Une fenetre de regie, un affichage plein ecran, et tout ce qu'il faut autour :
+        partage par QR code, messages a l'orateur, questions du public moderees,
+        deroule de session et un mode hors ligne qui fonctionne sans reseau.
+      </p>
+    </div>
+    <img src="/icons/logo.png" alt="TimeStage" class="hero-logo" width="512" height="512">
+  </section>
 
+  <section>
     <div class="actions">
       <form class="panel" id="create-form">
         <h2>Nouvelle session</h2>
