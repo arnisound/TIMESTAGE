@@ -106,7 +106,8 @@ function render() {
   $('#auto-advance').checked = !!state.session.autoAdvance;
   $('#questions-open').checked = !!state.settings.questionsOpen;
   $('#require-approval').checked = !!state.settings.requireApproval;
-  $('#theme-select').value = state.settings.theme || 'dark';
+  $('#theme-select').value = state.settings.theme || 'brand';
+  renderTuning(state.settings);
   for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
   $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
   $('#btn-blackout').textContent = state.settings.blackout ? 'Quitter l\'ecran noir' : 'Ecran noir';
@@ -381,6 +382,155 @@ for (const input of $$('[data-setting]')) {
 $('#theme-select').addEventListener('change', (event) => cmd('settings.update', { patch: { theme: event.target.value } }));
 $('#btn-blackout').addEventListener('click', () => cmd('settings.update', { patch: { blackout: !state?.settings.blackout } }));
 
+// --- Personnalisation de l'affichage ----------------------------------------
+function pct(value) { return Math.round(Number(value) * 100) + ' %'; }
+
+function renderTuning(settings) {
+  const set = (id, value) => { if (document.activeElement !== $(id)) $(id).value = value; };
+  set('#timer-scale', settings.timerScale ?? 1);
+  set('#text-scale', settings.textScale ?? 1);
+  set('#logo-size', settings.logoSize ?? 12);
+  set('#logo-opacity', settings.logoOpacity ?? 100);
+  set('#logo-position', settings.logoPosition || 'top-right');
+  $('#timer-scale-out').textContent = pct(settings.timerScale ?? 1);
+  $('#text-scale-out').textContent = pct(settings.textScale ?? 1);
+  $('#logo-size-out').textContent = Math.round(settings.logoSize ?? 12) + ' %';
+  $('#logo-opacity-out').textContent = Math.round(settings.logoOpacity ?? 100) + ' %';
+  for (const button of $$('#align-seg button')) {
+    button.setAttribute('aria-pressed', String(button.dataset.align === (settings.timerAlign || 'center')));
+  }
+  for (const button of $$('#logo-seg button')) {
+    button.setAttribute('aria-pressed', String(button.dataset.logo === (settings.logoMode || 'none')));
+  }
+  const hasLogo = !!state?.logoUrl;
+  $('#btn-logo-remove').disabled = !hasLogo;
+  $('#btn-logo-upload').textContent = hasLogo ? 'Remplacer l\'image…' : 'Choisir une image…';
+}
+
+// Les curseurs envoient en continu : on limite la cadence pour ne pas noyer
+// la liaison, et on confirme toujours la valeur finale.
+function throttledSetting(key, node, format) {
+  let timer = null;
+  let pending = null;
+  const flush = () => {
+    timer = null;
+    if (pending === null) return;
+    cmd('settings.update', { patch: { [key]: pending } });
+    pending = null;
+  };
+  node.addEventListener('input', () => {
+    const value = Number(node.value);
+    if (format) format(value);
+    pending = value;
+    if (!timer) timer = setTimeout(flush, 120);
+  });
+  node.addEventListener('change', () => {
+    pending = Number(node.value);
+    if (timer) clearTimeout(timer);
+    flush();
+  });
+}
+
+throttledSetting('timerScale', $('#timer-scale'), (v) => ($('#timer-scale-out').textContent = pct(v)));
+throttledSetting('textScale', $('#text-scale'), (v) => ($('#text-scale-out').textContent = pct(v)));
+throttledSetting('logoSize', $('#logo-size'), (v) => ($('#logo-size-out').textContent = Math.round(v) + ' %'));
+throttledSetting('logoOpacity', $('#logo-opacity'), (v) => ($('#logo-opacity-out').textContent = Math.round(v) + ' %'));
+
+for (const button of $$('#align-seg button')) {
+  button.addEventListener('click', () => cmd('settings.update', { patch: { timerAlign: button.dataset.align } }));
+}
+for (const button of $$('#logo-seg button')) {
+  button.addEventListener('click', async () => {
+    if (button.dataset.logo === 'custom' && !state?.logoUrl) return uploadLogo();
+    cmd('settings.update', { patch: { logoMode: button.dataset.logo } });
+  });
+}
+$('#logo-position').addEventListener('change', (event) => {
+  cmd('settings.update', { patch: { logoPosition: event.target.value } });
+});
+$('#btn-tune-reset').addEventListener('click', () => {
+  cmd('settings.update', {
+    patch: { timerScale: 1, textScale: 1, timerAlign: 'center', logoSize: 12, logoOpacity: 100, logoPosition: 'top-right' },
+  });
+});
+
+const LOGO_KEY = 'timestage:logo:' + code;
+
+/**
+ * Prepare l'image : les matriciels sont redimensionnes a 512 px de cote, ce qui
+ * suffit largement pour un ecran de scene et garde la salle legere. Les SVG
+ * passent tels quels, ils sont vectoriels.
+ */
+function prepareLogo(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('lecture impossible'));
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      if (file.type === 'image/svg+xml') return resolve(dataUrl);
+      const img = new Image();
+      img.onerror = () => reject(new Error('image illisible'));
+      img.onload = () => {
+        const max = 512;
+        const ratio = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * ratio));
+        canvas.height = Math.max(1, Math.round(img.height * ratio));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendLogo(dataUrl) {
+  const response = await fetch(`/api/rooms/${code}/logo`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token, dataUrl }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'envoi impossible');
+  return data;
+}
+
+async function uploadLogo() {
+  const input = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/svg+xml', style: { display: 'none' } });
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    input.remove();
+    if (!file) return;
+    try {
+      const dataUrl = await prepareLogo(file);
+      await sendLogo(dataUrl);
+      // Conserve pour pouvoir le renvoyer si la salle doit etre recreee.
+      try { localStorage.setItem(LOGO_KEY, dataUrl); } catch { /* quota */ }
+      toast('Logo envoye', 'ok');
+    } catch (err) {
+      toast('Logo refuse : ' + err.message, 'error', 6000);
+    }
+  });
+  document.body.append(input);
+  input.click();
+}
+
+$('#btn-logo-upload').addEventListener('click', uploadLogo);
+$('#btn-logo-remove').addEventListener('click', async () => {
+  try {
+    await fetch(`/api/rooms/${code}/logo`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    try { localStorage.removeItem(LOGO_KEY); } catch { /* prive */ }
+    toast('Logo retire', 'ok');
+  } catch (err) {
+    toast('Retrait impossible : ' + err.message, 'error');
+  }
+});
+
 // --- Messages ---------------------------------------------------------------
 $('#message-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -512,6 +662,12 @@ function replaySnapshot(snapshot) {
   if (snapshot.autoAdvance) cmd('session.set', { autoAdvance: true });
   if (snapshot.settings) cmd('settings.update', { patch: snapshot.settings });
   if (snapshot.presets?.length) cmd('message.presets.set', { presets: snapshot.presets });
+  // Le logo televerse vit sur le serveur : on le renvoie apres une recreation.
+  let storedLogo = null;
+  try { storedLogo = localStorage.getItem(LOGO_KEY); } catch { /* prive */ }
+  if (storedLogo && snapshot.settings?.logoMode === 'custom') {
+    sendLogo(storedLogo).catch(() => toast('Logo a renvoyer manuellement.', 'error', 6000));
+  }
   const t = snapshot.timer;
   if (!t) return;
   if (t.mode && t.mode !== 'countdown') cmd('timer.setMode', { mode: t.mode });

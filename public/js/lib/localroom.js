@@ -20,6 +20,7 @@ function defaultState() {
     session: { name: 'Session hors ligne', autoAdvance: false, activeId: null, parts: [] },
     questions: [],
     shownQuestionId: null,
+    logoUrl: '', // data URL : le logo vit dans ce navigateur
     settings: {
       showTitle: true,
       showSpeaker: true,
@@ -27,11 +28,18 @@ function defaultState() {
       showProgress: true,
       showNextPart: true,
       blackout: false,
-      theme: 'dark',
+      theme: 'brand',
       flashOnEnd: true,
       displayName: '',
       questionsOpen: false,
       requireApproval: true,
+      timerScale: 1,
+      timerAlign: 'center',
+      textScale: 1,
+      logoMode: 'none',
+      logoPosition: 'top-right',
+      logoSize: 12,
+      logoOpacity: 100,
     },
     rev: 1,
   };
@@ -184,6 +192,10 @@ export class LocalRoom extends EventTarget {
       }
 
       case 'settings.update': Object.assign(s.settings, p.patch || {}); break;
+      case 'logo.set':
+        s.logoUrl = String(p.dataUrl || '');
+        s.settings.logoMode = s.logoUrl ? 'custom' : 'none';
+        break;
       case 'room.reset':
         this.state = { ...defaultState(), presets: s.presets, session: s.session, settings: s.settings };
         break;

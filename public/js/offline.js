@@ -59,7 +59,8 @@ function initControl() {
     $('#format-label').textContent = formatLabel(t.format);
     $('#overrun-input').checked = !!t.overrun;
 
-    $('#theme-select').value = state.settings.theme || 'dark';
+    $('#theme-select').value = state.settings.theme || 'brand';
+    renderTuning(state);
     for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
     $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
     $('#message-state').textContent = state.message.visible ? "A l'ecran" : 'Masque';
@@ -194,6 +195,89 @@ function initControl() {
     const url = new URL(location.pathname + '?view=display', location.href);
     window.open(url, 'timestage-offline-display', 'noopener');
   });
+
+  // --- Personnalisation de l'affichage --------------------------------------
+  function pct(value) { return Math.round(Number(value) * 100) + ' %'; }
+
+  function renderTuning(state) {
+    const st = state.settings;
+    const set = (id, value) => { if (document.activeElement !== $(id)) $(id).value = value; };
+    set('#timer-scale', st.timerScale ?? 1);
+    set('#text-scale', st.textScale ?? 1);
+    set('#logo-size', st.logoSize ?? 12);
+    set('#logo-opacity', st.logoOpacity ?? 100);
+    set('#logo-position', st.logoPosition || 'top-right');
+    $('#timer-scale-out').textContent = pct(st.timerScale ?? 1);
+    $('#text-scale-out').textContent = pct(st.textScale ?? 1);
+    $('#logo-size-out').textContent = Math.round(st.logoSize ?? 12) + ' %';
+    $('#logo-opacity-out').textContent = Math.round(st.logoOpacity ?? 100) + ' %';
+    for (const button of $$('#align-seg button')) {
+      button.setAttribute('aria-pressed', String(button.dataset.align === (st.timerAlign || 'center')));
+    }
+    for (const button of $$('#logo-seg button')) {
+      button.setAttribute('aria-pressed', String(button.dataset.logo === (st.logoMode || 'none')));
+    }
+    $('#btn-logo-remove').disabled = !state.logoUrl;
+    $('#btn-logo-upload').textContent = state.logoUrl ? 'Remplacer l\'image…' : 'Choisir une image…';
+  }
+
+  const bindRange = (id, key, format) => {
+    const node = $(id);
+    const push = () => apply('settings.update', { patch: { [key]: Number(node.value) } });
+    node.addEventListener('input', () => { format(Number(node.value)); push(); });
+    node.addEventListener('change', push);
+  };
+  bindRange('#timer-scale', 'timerScale', (v) => ($('#timer-scale-out').textContent = pct(v)));
+  bindRange('#text-scale', 'textScale', (v) => ($('#text-scale-out').textContent = pct(v)));
+  bindRange('#logo-size', 'logoSize', (v) => ($('#logo-size-out').textContent = Math.round(v) + ' %'));
+  bindRange('#logo-opacity', 'logoOpacity', (v) => ($('#logo-opacity-out').textContent = Math.round(v) + ' %'));
+
+  for (const button of $$('#align-seg button')) {
+    button.addEventListener('click', () => apply('settings.update', { patch: { timerAlign: button.dataset.align } }));
+  }
+  for (const button of $$('#logo-seg button')) {
+    button.addEventListener('click', () => {
+      if (button.dataset.logo === 'custom' && !room.state.logoUrl) return pickLogo();
+      apply('settings.update', { patch: { logoMode: button.dataset.logo } });
+    });
+  }
+  $('#logo-position').addEventListener('change', (event) => {
+    apply('settings.update', { patch: { logoPosition: event.target.value } });
+  });
+
+  // Hors ligne, le logo reste dans ce navigateur : il voyage en data URL vers
+  // la fenetre d'affichage par le meme canal que le reste de l'etat.
+  function pickLogo() {
+    const input = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/svg+xml', style: { display: 'none' } });
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result);
+        if (file.type === 'image/svg+xml') return apply('logo.set', { dataUrl });
+        const img = new Image();
+        img.onload = () => {
+          const ratio = Math.min(1, 512 / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * ratio));
+          canvas.height = Math.max(1, Math.round(img.height * ratio));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          apply('logo.set', { dataUrl: canvas.toDataURL('image/png') });
+        };
+        img.onerror = () => toast('Image illisible.', 'error');
+        img.src = dataUrl;
+      };
+      reader.onerror = () => toast('Lecture impossible.', 'error');
+      reader.readAsDataURL(file);
+    });
+    document.body.append(input);
+    input.click();
+  }
+
+  $('#btn-logo-upload').addEventListener('click', pickLogo);
+  $('#btn-logo-remove').addEventListener('click', () => apply('logo.set', { dataUrl: '' }));
 
   // --- Raccourcis -----------------------------------------------------------
   document.addEventListener('keydown', (event) => {

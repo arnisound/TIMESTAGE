@@ -123,6 +123,39 @@ test('un code de salle invalide est refuse', async () => {
   }
 });
 
+test('le logo : envoi reserve a la regie, service et retrait', async () => {
+  const room = await createRoom('Logo');
+  const dataUrl = 'data:image/png;base64,' + 'A'.repeat(200);
+  const put = (body) =>
+    fetch(`${base}/api/rooms/${room.code}/logo`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+  assert.equal((await put({ dataUrl })).status, 403, 'sans jeton : refuse');
+  assert.equal((await put({ token: 'faux', dataUrl })).status, 403);
+  assert.equal((await put({ token: room.ownerToken, dataUrl: 'data:text/html;base64,AA' })).status, 400);
+
+  const ok = await put({ token: room.ownerToken, dataUrl });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).version, 1);
+
+  const image = await fetch(`${base}/api/rooms/${room.code}/logo?v=1`);
+  assert.equal(image.status, 200);
+  assert.equal(image.headers.get('content-type'), 'image/png');
+  assert.match(image.headers.get('cache-control'), /immutable/);
+  assert.ok((await image.arrayBuffer()).byteLength > 100);
+
+  const removed = await fetch(`${base}/api/rooms/${room.code}/logo`, {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: room.ownerToken }),
+  });
+  assert.equal(removed.status, 200);
+  assert.equal((await fetch(`${base}/api/rooms/${room.code}/logo`)).status, 404);
+});
+
 test('la regie pilote, l affichage suit', async () => {
   const room = await createRoom('Demo');
 

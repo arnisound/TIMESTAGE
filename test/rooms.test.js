@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode } from '../server/rooms.js';
+import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo } from '../server/rooms.js';
 import { MS } from '../shared/time.js';
 
 const newRoom = () => new RoomStore().create('Test').room;
@@ -191,4 +191,71 @@ test('normalizeCode accepte la casse et les espaces', () => {
   assert.equal(normalizeCode(' abcde '), 'ABCDE');
   assert.equal(normalizeCode('a2c4e'), 'A2C4E');
   assert.equal(normalizeCode('abc'), null);
+});
+
+const pngDataUrl = (bytes = 100) => 'data:image/png;base64,' + 'A'.repeat(Math.ceil((bytes * 4) / 3));
+
+test('les reglages numeriques sont bornes, les enums verifies', () => {
+  const settings = defaultSettings();
+
+  applySettings(settings, { timerScale: 9, textScale: -3, logoSize: 200, logoOpacity: 0 });
+  assert.equal(settings.timerScale, 1.6, 'plafonne');
+  assert.equal(settings.textScale, 0.5, 'plancher');
+  assert.equal(settings.logoSize, 60);
+  assert.equal(settings.logoOpacity, 10);
+
+  applySettings(settings, { timerAlign: 'top', logoPosition: 'center', theme: 'contrast' });
+  assert.equal(settings.timerAlign, 'top');
+  assert.equal(settings.logoPosition, 'center');
+  assert.equal(settings.theme, 'contrast');
+
+  // Valeurs hors liste : l'ancienne est conservee.
+  applySettings(settings, { timerAlign: 'diagonale', theme: 'neon', logoMode: 'video' });
+  assert.equal(settings.timerAlign, 'top');
+  assert.equal(settings.theme, 'contrast');
+  assert.equal(settings.logoMode, 'none');
+
+  // Valeurs non numeriques ignorees.
+  applySettings(settings, { timerScale: 'grand' });
+  assert.equal(settings.timerScale, 1.6);
+});
+
+test('applySettings ignore les cles hors schema', () => {
+  const settings = defaultSettings();
+  applySettings(settings, { ownerToken: 'vole', piratage: true, showTitle: false });
+  assert.equal(settings.ownerToken, undefined);
+  assert.equal(settings.piratage, undefined);
+  assert.equal(settings.showTitle, false);
+});
+
+test('le logo est stocke hors de l etat diffuse', () => {
+  const room = newRoom();
+  assert.equal(publicState(room).logoUrl, '');
+
+  const result = setRoomLogo(room, pngDataUrl());
+  assert.equal(result.ok, true);
+  assert.equal(result.version, 1);
+  assert.equal(room.settings.logoMode, 'custom', 'le mode bascule automatiquement');
+
+  const state = publicState(room);
+  assert.equal(state.logo, undefined, 'le binaire ne part jamais dans l etat');
+  assert.match(state.logoUrl, new RegExp(`/api/rooms/${room.code}/logo\\?v=1$`));
+
+  // Un nouvel envoi incremente la version : l'URL change, le cache suit.
+  assert.equal(setRoomLogo(room, pngDataUrl()).version, 2);
+  assert.match(publicState(room).logoUrl, /v=2$/);
+
+  assert.equal(clearRoomLogo(room), true);
+  assert.equal(publicState(room).logoUrl, '');
+  assert.equal(room.settings.logoMode, 'none', 'le mode revient a aucun');
+  assert.equal(clearRoomLogo(room), false, 'rien a retirer la seconde fois');
+});
+
+test('le logo refuse les formats et les tailles hors limites', () => {
+  const room = newRoom();
+  assert.equal(setRoomLogo(room, 'data:text/html;base64,AAAA').ok, false);
+  assert.equal(setRoomLogo(room, 'pas une data url').ok, false);
+  assert.equal(setRoomLogo(room, '').ok, false);
+  assert.equal(setRoomLogo(room, pngDataUrl(500 * 1024)).ok, false, 'trop lourd');
+  assert.equal(setRoomLogo(room, 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=').ok, true);
 });

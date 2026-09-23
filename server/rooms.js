@@ -53,6 +53,32 @@ function clampInt(value, min, max, fallback = min) {
   return Math.min(max, Math.max(min, n));
 }
 
+/**
+ * Schema des reglages : type par cle, pour valider ce qui arrive du client.
+ * 'bool' | 'text:<max>' | ['a','b'] (enum) | {min, max} (nombre borne)
+ */
+const SETTINGS_SCHEMA = {
+  questionsOpen: 'bool',
+  requireApproval: 'bool',
+  showTitle: 'bool',
+  showSpeaker: 'bool',
+  showClock: 'bool',
+  showProgress: 'bool',
+  showNextPart: 'bool',
+  blackout: 'bool',
+  flashOnEnd: 'bool',
+  theme: ['dark', 'brand', 'light', 'contrast'],
+  displayName: 'text:80',
+  // Personnalisation de l'affichage
+  timerScale: { min: 0.4, max: 1.6 },
+  timerAlign: ['top', 'center', 'bottom'],
+  textScale: { min: 0.5, max: 2 },
+  logoMode: ['none', 'timestage', 'custom'],
+  logoPosition: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
+  logoSize: { min: 4, max: 60 },
+  logoOpacity: { min: 10, max: 100 },
+};
+
 export function defaultSettings() {
   return {
     questionsOpen: true,
@@ -63,10 +89,39 @@ export function defaultSettings() {
     showProgress: true,
     showNextPart: true,
     blackout: false,
-    theme: 'dark',
+    theme: 'brand',
     flashOnEnd: true,
     displayName: '',
+    timerScale: 1,
+    timerAlign: 'center',
+    textScale: 1,
+    logoMode: 'none',
+    logoPosition: 'top-right',
+    logoSize: 12,
+    logoOpacity: 100,
   };
+}
+
+/** Applique un lot de reglages en respectant le schema. Renvoie le nombre retenu. */
+export function applySettings(settings, patch = {}) {
+  let applied = 0;
+  for (const [key, rule] of Object.entries(SETTINGS_SCHEMA)) {
+    if (!(key in patch)) continue;
+    const value = patch[key];
+    if (rule === 'bool') settings[key] = !!value;
+    else if (typeof rule === 'string' && rule.startsWith('text:')) {
+      settings[key] = cleanText(value, Number(rule.slice(5)));
+    } else if (Array.isArray(rule)) {
+      if (!rule.includes(value)) continue;
+      settings[key] = value;
+    } else {
+      const n = Number(value);
+      if (!Number.isFinite(n)) continue;
+      settings[key] = Math.min(rule.max, Math.max(rule.min, Math.round(n * 100) / 100));
+    }
+    applied += 1;
+  }
+  return applied;
 }
 
 export function defaultMessage() {
@@ -97,13 +152,49 @@ export function createRoomState(code, name = '') {
     questions: [],
     shownQuestionId: null,
     settings: defaultSettings(),
+    logo: null, // { data: base64, type: 'image/png', version: n }
   };
 }
 
-/** Vue publique (sans le jeton de controle). */
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+const LOGO_MAX_BYTES = 400 * 1024;
+
+/**
+ * Enregistre le logo de l'evenement, fourni en data URL par la regie.
+ * Stocke a part de l'etat : il ne transite pas a chaque diffusion.
+ */
+export function setRoomLogo(room, dataUrl, now = Date.now()) {
+  const match = /^data:([\w/+.-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || '').trim());
+  if (!match) return { ok: false, error: 'Image illisible.' };
+  const [, type, base64] = match;
+  if (!LOGO_TYPES.includes(type)) return { ok: false, error: 'Format accepte : PNG, JPEG, WebP ou SVG.' };
+  const bytes = Math.floor((base64.length * 3) / 4);
+  if (bytes > LOGO_MAX_BYTES) return { ok: false, error: 'Image trop lourde (400 ko maximum).' };
+
+  room.logo = { data: base64, type, version: (room.logo?.version || 0) + 1, at: now };
+  room.settings.logoMode = 'custom';
+  room.updatedAt = now;
+  room.rev += 1;
+  return { ok: true, version: room.logo.version };
+}
+
+export function clearRoomLogo(room, now = Date.now()) {
+  if (!room.logo) return false;
+  room.logo = null;
+  if (room.settings.logoMode === 'custom') room.settings.logoMode = 'none';
+  room.updatedAt = now;
+  room.rev += 1;
+  return true;
+}
+
+/** Vue publique : ni jeton de controle, ni binaire du logo. */
 export function publicState(room) {
-  const { ownerToken, ...rest } = room;
-  return rest;
+  const { ownerToken, logo, ...rest } = room;
+  return {
+    ...rest,
+    // L'image est servie par une route dediee, versionnee pour le cache.
+    logoUrl: logo ? `/api/rooms/${room.code}/logo?v=${logo.version}` : '',
+  };
 }
 
 /** Vue destinee a l'affichage et au public : pas de questions en attente. */
@@ -325,17 +416,9 @@ export function applyCommand(room, name, payload = {}, now = Date.now()) {
       room.shownQuestionId = null;
       break;
 
-    case 'settings.update': {
-      const patch = p.patch || {};
-      const s = room.settings;
-      for (const key of Object.keys(defaultSettings())) {
-        if (!(key in patch)) continue;
-        if (key === 'theme') s.theme = ['dark', 'light', 'contrast'].includes(patch.theme) ? patch.theme : s.theme;
-        else if (key === 'displayName') s.displayName = cleanText(patch.displayName, 80);
-        else s[key] = !!patch[key];
-      }
+    case 'settings.update':
+      applySettings(room.settings, p.patch || {});
       break;
-    }
 
     case 'room.reset':
       room.timer = T.defaultTimer();
@@ -528,6 +611,7 @@ export class RoomStore {
           room.timer.startedAt = null;
         }
         room.settings = { ...defaultSettings(), ...(room.settings || {}) };
+        room.logo = room.logo?.data ? room.logo : null;
         room.message = { ...defaultMessage(), ...(room.message || {}) };
         room.questions = Array.isArray(room.questions) ? room.questions : [];
         room.presets = Array.isArray(room.presets) && room.presets.length ? room.presets : defaultPresets();

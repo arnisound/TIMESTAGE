@@ -1,17 +1,22 @@
 /* TimeStage — systeme de design commun */
 :root {
-  --bg: #0b0e14;
-  --bg-soft: #11161f;
-  --panel: #151b26;
-  --panel-2: #1c2431;
-  --line: #27303f;
-  --line-soft: #1f2837;
-  --text: #e8edf5;
-  --muted: #8d9bb1;
-  --accent: #38bdf8;
-  --accent-ink: #04222f;
+  /* Charte du logo : badge noir, or, blanc. */
+  --bg: #08080b;
+  --bg-soft: #101014;
+  --panel: #15151a;
+  --panel-2: #1e1e25;
+  --line: #2c2c35;
+  --line-soft: #232329;
+  --text: #f4f1ea;
+  --muted: #9b958a;
+  --accent: #cb8a27;
+  --accent-light: #e2ab52;
+  --accent-ink: #140f05;
+  --accent-glow: rgba(203, 138, 39, .18);
+  /* Couleurs de signalisation du chrono : volontairement distinctes de l'or,
+     pour qu'un bouton de l'interface ne se confonde jamais avec une alerte. */
   --ok: #22c55e;
-  --warn: #f59e0b;
+  --warn: #facc15;
   --danger: #ef4444;
   --violet: #a78bfa;
   --radius: 12px;
@@ -104,15 +109,15 @@ small { font-size: .8rem; }
   transition: background .12s ease, border-color .12s ease, transform .05s ease, opacity .12s;
   user-select: none;
 }
-.btn:hover { background: #26303f; border-color: #37445a; }
+.btn:hover { background: #26262f; border-color: #3d3d49; }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.primary:hover { background: #63cdfb; }
+.btn.primary:hover { background: var(--accent-light); }
 .btn.ok { background: var(--ok); border-color: var(--ok); color: #05210f; }
 .btn.ok:hover { filter: brightness(1.08); }
-.btn.warn { background: var(--warn); border-color: var(--warn); color: #2a1a00; }
+.btn.warn { background: var(--warn); border-color: var(--warn); color: #2a2200; }
 .btn.danger { background: transparent; border-color: #5c2b2b; color: #ff9a9a; }
 .btn.danger:hover { background: #3a1d1d; }
 .btn.ghost { background: transparent; }
@@ -142,7 +147,7 @@ input[type="text"], input[type="number"], input[type="search"], select, textarea
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, .16);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 textarea { resize: vertical; min-height: 4.5rem; }
 label { font-size: .82rem; color: var(--muted); display: block; margin-bottom: .2rem; }
@@ -166,12 +171,13 @@ label { font-size: .82rem; color: var(--muted); display: block; margin-bottom: .
   color: var(--muted);
 }
 .chip.ok { color: #9af5bd; border-color: #1c5234; background: #0f2a1b; }
-.chip.warn { color: #ffd591; border-color: #5c4318; background: #2b2008; }
+.chip.warn { color: #fde68a; border-color: #5c4d18; background: #2b2508; }
 .chip.danger { color: #ffb3b3; border-color: #5c2b2b; background: #2b1010; }
-.chip.accent { color: #bde9ff; border-color: #1d4a63; background: #08283a; }
+.chip.accent { color: #f0cd8e; border-color: #5c4318; background: #2a1e08; }
 
 .dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--muted); flex: none; }
 .dot.ok { background: var(--ok); box-shadow: 0 0 8px rgba(34, 197, 94, .7); }
+.dot.accent { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
 .dot.warn { background: var(--warn); }
 .dot.danger { background: var(--danger); }
 
@@ -197,7 +203,7 @@ label { font-size: .82rem; color: var(--muted); display: block; margin-bottom: .
   gap: .6rem;
   align-items: flex-start;
 }
-.list-item.active { border-color: var(--accent); background: #0d2432; }
+.list-item.active { border-color: var(--accent); background: #211806; }
 .list-item.done { opacity: .55; }
 .empty { color: var(--muted); font-size: .85rem; padding: .8rem; text-align: center; border: 1px dashed var(--line); border-radius: var(--radius-sm); }
 

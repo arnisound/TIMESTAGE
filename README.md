@@ -80,10 +80,16 @@ demande simplement de coller ce lien.
 - Limitation de débit et filtrage des doublons côté serveur.
 
 **Affichage**
-- Plein écran, chiffres dimensionnés automatiquement, thèmes sombre / clair /
-  contraste maximal, écran noir instantané.
+- Plein écran, chiffres dimensionnés automatiquement, thèmes Or / sombre /
+  clair / contraste maximal, écran noir instantané.
 - Titre, intervenant, heure du jour, barre de progression et partie suivante
   activables séparément.
+- **Personnalisation depuis la régie** : taille du chrono, position (haut,
+  centre, bas), taille des textes secondaires, et logo de l'événement — le
+  vôtre, téléversé depuis la régie, ou celui de TimeStage — avec emplacement
+  (quatre coins ou filigrane centré), taille et opacité.
+  Le chrono ne déborde jamais de l'écran, quel que soit le réglage : un chiffre
+  coupé sur une scène ne se rattrape pas.
 - Verrouillage de la mise en veille de l'écran (Wake Lock) et masquage du curseur.
 - Si le réseau tombe, l'affichage **continue de compter** et se reconnecte seul.
 
@@ -134,6 +140,9 @@ dérive entre les écrans.
 | `POST` | `/api/rooms` | Crée une salle, renvoie le code et la clé de régie. Un `code` peut être demandé pour reprendre une salle perdue après un redémarrage (409 s'il est déjà pris) |
 | `GET` | `/api/rooms/:code` | Existence et état public d'une salle |
 | `POST` | `/api/rooms/:code/questions` | Envoi d'une question (repli sans WebSocket) |
+| `PUT` | `/api/rooms/:code/logo` | Téléverse le logo de l'événement (régie uniquement, data URL, 400 ko max) |
+| `GET` | `/api/rooms/:code/logo` | Sert ce logo (URL versionnée, cache immuable) |
+| `DELETE` | `/api/rooms/:code/logo` | Retire le logo (régie uniquement) |
 | `GET` | `/api/qr.svg?data=…` | QR code en SVG |
 | `GET` | `/api/health` | Sonde de santé |
 
@@ -250,6 +259,11 @@ Servez l'application en HTTPS : le mode hors ligne (service worker), le plein
 Les salles inactives depuis 48 h sont purgées automatiquement.
 
 ## Identité visuelle
+
+L'interface reprend la charte du logo : fond noir, or `#cb8a27`, blanc chaud.
+Les trois couleurs de signalisation du chronomètre (vert, **jaune**, rouge)
+restent volontairement distinctes de l'or, pour qu'un bouton de l'interface ne
+puisse jamais être confondu avec une alerte de fin de temps.
 
 Le logo source est dans `brand/timestage-logo.svg`. Son texte utilise la police
 Arial Rounded MT Bold : pour éviter toute dépendance à une police installée,

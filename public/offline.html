@@ -160,7 +160,7 @@
         <div class="panel-head"><h2 class="panel-title">Affichage</h2></div>
         <div class="field">
           <label for="theme-select">Theme</label>
-          <select id="theme-select"><option value="dark">Sombre</option><option value="light">Clair</option><option value="contrast">Contraste maximal</option></select>
+          <select id="theme-select"><option value="brand">Or (charte TimeStage)</option><option value="dark">Sombre</option><option value="light">Clair</option><option value="contrast">Contraste maximal</option></select>
         </div>
         <div class="stack" style="margin-top:.6rem">
           <label class="check"><input type="checkbox" data-setting="showTitle"> Titre</label>
@@ -174,6 +174,58 @@
           <button class="btn grow" id="btn-blackout" aria-pressed="false">Ecran noir</button>
           <button class="btn ghost" id="btn-fullscreen">Plein ecran ici</button>
         </div>
+
+        <details class="tune" id="tune">
+          <summary>Personnaliser l'affichage</summary>
+          <div class="tune-row">
+            <label for="timer-scale">Taille du chrono <output id="timer-scale-out">100 %</output></label>
+            <input type="range" id="timer-scale" min="0.4" max="1.2" step="0.05" value="1">
+          <small class="muted">100 % = le plus grand qui tienne a l'ecran</small>
+          </div>
+          <div class="tune-row">
+            <label>Position du chrono</label>
+            <div class="seg" id="align-seg" role="group" aria-label="Position du chrono">
+              <button type="button" data-align="top" aria-pressed="false">Haut</button>
+              <button type="button" data-align="center" aria-pressed="true">Centre</button>
+              <button type="button" data-align="bottom" aria-pressed="false">Bas</button>
+            </div>
+          </div>
+          <div class="tune-row">
+            <label for="text-scale">Taille des textes <output id="text-scale-out">100 %</output></label>
+            <input type="range" id="text-scale" min="0.5" max="2" step="0.05" value="1">
+          </div>
+          <hr class="tune-sep">
+          <div class="tune-row">
+            <label>Logo affiche sur scene</label>
+            <div class="seg" id="logo-seg" role="group" aria-label="Logo">
+              <button type="button" data-logo="none" aria-pressed="true">Aucun</button>
+              <button type="button" data-logo="timestage" aria-pressed="false">TimeStage</button>
+              <button type="button" data-logo="custom" aria-pressed="false">Le mien</button>
+            </div>
+          </div>
+          <div class="row tight">
+            <button class="btn sm grow" type="button" id="btn-logo-upload">Choisir une image…</button>
+            <button class="btn sm ghost" type="button" id="btn-logo-remove">Retirer</button>
+          </div>
+          <div class="tune-row">
+            <label for="logo-position">Emplacement du logo</label>
+            <select id="logo-position">
+              <option value="top-left">En haut a gauche</option>
+              <option value="top-right">En haut a droite</option>
+              <option value="bottom-left">En bas a gauche</option>
+              <option value="bottom-right">En bas a droite</option>
+              <option value="center">Filigrane centre</option>
+            </select>
+          </div>
+          <div class="tune-row">
+            <label for="logo-size">Taille du logo <output id="logo-size-out">12 %</output></label>
+            <input type="range" id="logo-size" min="4" max="60" step="1" value="12">
+          </div>
+          <div class="tune-row">
+            <label for="logo-opacity">Opacite du logo <output id="logo-opacity-out">100 %</output></label>
+            <input type="range" id="logo-opacity" min="10" max="100" step="5" value="100">
+          </div>
+        </details>
         <p class="muted" style="margin:.7rem 0 0">
           <small>Tout reste dans ce navigateur. « Ouvrir l'affichage » lance une seconde fenetre synchronisee sur cet appareil, sans reseau.</small>
         </p>

@@ -31,6 +31,7 @@ export function createStage(root) {
   const messageNode = el('div', { class: 'stage-overlay stage-message hidden', role: 'status' });
   const questionNode = el('div', { class: 'stage-overlay stage-question hidden' });
   const flash = el('div', { class: 'stage-flash' });
+  const logoNode = el('img', { class: 'stage-logo', alt: '', hidden: true });
 
   root.append(
     el('div', { class: 'stage-top' }, [
@@ -42,6 +43,7 @@ export function createStage(root) {
     el('div', { class: 'stage-bottom' }, [nextNode, stateNode]),
     messageNode,
     questionNode,
+    logoNode,
     flash
   );
 
@@ -53,13 +55,18 @@ export function createStage(root) {
     const text = timeNode.textContent || '';
     const width = mainNode.clientWidth || root.clientWidth || window.innerWidth;
     const height = mainNode.clientHeight || root.clientHeight || window.innerHeight;
-    const key = `${text.length}|${width}|${height}`;
+    const scale = Number(root.dataset.timerScale) || 1;
+    const key = `${text.length}|${width}|${height}|${scale}`;
     if (!force && key === lastFit) return;
     lastFit = key;
     // ~0.6em par caractere en chiffres tabulaires, avec une marge de securite.
     const byWidth = (width * 0.96) / Math.max(4, text.length) / 0.6;
     const byHeight = height * (subNode.classList.contains('hidden') ? 0.92 : 0.74);
-    timeNode.style.fontSize = Math.max(14, Math.min(byWidth, byHeight)) + 'px';
+    const fitted = Math.min(byWidth, byHeight);
+    // Le reglage de la regie agrandit ou reduit, mais ne fait jamais deborder :
+    // un chiffre coupe sur un ecran de scene n'est pas rattrapable.
+    const ceiling = Math.min(byWidth, height * 0.98);
+    timeNode.style.fontSize = Math.max(14, Math.min(fitted * scale, ceiling)) + 'px';
   };
   window.addEventListener('resize', () => fit(true));
   if (window.ResizeObserver) new ResizeObserver(() => fit(true)).observe(mainNode);
@@ -147,6 +154,26 @@ export function createStage(root) {
       );
     }
 
+    // --- Personnalisation de l'affichage -----------------------------------
+    const timerScale = clampNumber(settings.timerScale, 0.4, 1.6, 1);
+    if (root.dataset.timerScale !== String(timerScale)) {
+      root.dataset.timerScale = String(timerScale);
+      fit(true);
+    }
+    root.style.setProperty('--text-scale', clampNumber(settings.textScale, 0.5, 2, 1));
+    root.dataset.align = ['top', 'center', 'bottom'].includes(settings.timerAlign) ? settings.timerAlign : 'center';
+
+    const logoSrc = logoSource(state, settings);
+    if (logoSrc) {
+      if (logoNode.getAttribute('src') !== logoSrc) logoNode.setAttribute('src', logoSrc);
+      logoNode.hidden = false;
+      logoNode.dataset.pos = settings.logoPosition || 'top-right';
+      root.style.setProperty('--logo-size', clampNumber(settings.logoSize, 4, 60, 12) + '%');
+      root.style.setProperty('--logo-opacity', clampNumber(settings.logoOpacity, 10, 100, 100) / 100);
+    } else {
+      logoNode.hidden = true;
+    }
+
     // --- Ecran noir --------------------------------------------------------
     root.classList.toggle('blackout', !!settings.blackout);
 
@@ -161,4 +188,23 @@ export function createStage(root) {
   }
 
   return { update, fit: () => fit(true), nodes: { timeNode, messageNode, questionNode } };
+}
+
+function clampNumber(value, min, max, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+/**
+ * Source du logo affiche sur scene.
+ * - 'timestage' : le logo de l'application, servi a cote de ce module ;
+ * - 'custom'    : l'image televersee par la regie. L'appelant fournit son URL
+ *                 dans l'etat (URL servie par le serveur, ou data URL locale
+ *                 en mode hors ligne).
+ */
+function logoSource(state, settings) {
+  if (settings.logoMode === 'custom') return state.logoUrl || '';
+  if (settings.logoMode === 'timestage') return new URL('../../icons/logo.png', import.meta.url).href;
+  return '';
 }

@@ -16,6 +16,8 @@ import {
   viewerState,
   tickRoom,
   cleanText,
+  setRoomLogo,
+  clearRoomLogo,
 } from './rooms.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -29,7 +31,7 @@ const DATA_FILE = process.env.TIMESTAGE_DATA === 'none' ? null : process.env.TIM
 const store = new RoomStore({ file: DATA_FILE });
 const app = express();
 app.set('trust proxy', true);
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '1mb' })); // le logo arrive en data URL
 
 // --- Limitation de debit simple (memoire) ----------------------------------
 const buckets = new Map();
@@ -124,6 +126,45 @@ app.post('/api/rooms/:code/questions', (req, res) => {
   store.scheduleSave();
   broadcast(room);
   res.status(201).json({ ok: true, id: result.question.id, status: result.question.status });
+});
+
+// --- Logo de l'evenement ----------------------------------------------------
+app.put('/api/rooms/:code/logo', (req, res) => {
+  const room = store.get(req.params.code);
+  if (!room) return res.status(404).json({ error: 'Salle introuvable.' });
+  if (!store.isOwner(room, req.body?.token)) {
+    return res.status(403).json({ error: 'Reserve a la regie.' });
+  }
+  const limit = rateLimit('logo:' + clientIp(req), { limit: 20, windowMs: 10 * 60_000 });
+  if (!limit.ok) return res.status(429).json({ error: 'Trop d envois, patientez un instant.' });
+
+  const result = setRoomLogo(room, req.body?.dataUrl);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  store.scheduleSave();
+  broadcast(room);
+  res.json({ ok: true, version: result.version });
+});
+
+app.delete('/api/rooms/:code/logo', (req, res) => {
+  const room = store.get(req.params.code);
+  if (!room) return res.status(404).json({ error: 'Salle introuvable.' });
+  if (!store.isOwner(room, req.body?.token)) {
+    return res.status(403).json({ error: 'Reserve a la regie.' });
+  }
+  if (clearRoomLogo(room)) {
+    store.scheduleSave();
+    broadcast(room);
+  }
+  res.json({ ok: true });
+});
+
+app.get('/api/rooms/:code/logo', (req, res) => {
+  const room = store.get(req.params.code);
+  if (!room?.logo) return res.status(404).send('Aucun logo.');
+  // L'URL est versionnee : le contenu d'une version donnee ne change jamais.
+  res.type(room.logo.type)
+    .set('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'no-cache')
+    .send(Buffer.from(room.logo.data, 'base64'));
 });
 
 app.get('/api/qr.svg', async (req, res) => {
