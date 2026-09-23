@@ -77,7 +77,15 @@ const SETTINGS_SCHEMA = {
   logoPosition: ['above', 'below', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
   logoSize: { min: 4, max: 60 },
   logoOpacity: { min: 10, max: 100 },
+  // Couleurs du chrono. Vide = la couleur du theme pour cette phase.
+  colorNormal: 'color',
+  colorWrapUp: 'color',
+  colorFinal: 'color',
+  colorOverrun: 'color',
+  colorText: 'color',
 };
+
+const COLOR_RE = /^#[0-9a-f]{6}$/i;
 
 export function defaultSettings() {
   return {
@@ -99,6 +107,11 @@ export function defaultSettings() {
     logoPosition: 'top-right',
     logoSize: 12,
     logoOpacity: 100,
+    colorNormal: '',
+    colorWrapUp: '',
+    colorFinal: '',
+    colorOverrun: '',
+    colorText: '',
   };
 }
 
@@ -109,7 +122,14 @@ export function applySettings(settings, patch = {}) {
     if (!(key in patch)) continue;
     const value = patch[key];
     if (rule === 'bool') settings[key] = !!value;
-    else if (typeof rule === 'string' && rule.startsWith('text:')) {
+    else if (rule === 'color') {
+      // Seule la chaine vide rend la main au theme ; tout le reste doit etre
+      // un #rrggbb valide, sinon la couleur en place est conservee.
+      if (typeof value !== 'string') continue;
+      const color = value.trim().toLowerCase();
+      if (color !== '' && !COLOR_RE.test(color)) continue;
+      settings[key] = color;
+    } else if (typeof rule === 'string' && rule.startsWith('text:')) {
       settings[key] = cleanText(value, Number(rule.slice(5)));
     } else if (Array.isArray(rule)) {
       if (!rule.includes(value)) continue;

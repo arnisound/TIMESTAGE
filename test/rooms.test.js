@@ -313,3 +313,22 @@ test('la commande de regie pose et retire le code d acces', () => {
   assert.equal(applyCommand(room, 'room.setAccessCode', { code: 'no' }).ok, false, 'trop court : refuse');
   assert.equal(checkAccess(room, 'scene-2026'), true, 'l ancien code tient toujours');
 });
+
+test('les couleurs du chrono sont validees, le vide vaut « couleur du theme »', () => {
+  const settings = defaultSettings();
+  assert.equal(settings.colorNormal, '', 'aucune couleur imposee par defaut');
+
+  applySettings(settings, { colorNormal: '#FF8800', colorWrapUp: '#00b140' });
+  assert.equal(settings.colorNormal, '#ff8800', 'normalise en minuscules');
+  assert.equal(settings.colorWrapUp, '#00b140');
+
+  // Tout ce qui n'est pas #rrggbb est ignore : la couleur en place tient.
+  for (const bad of ['rouge', '#abc', 'ff8800', '#gggggg', 'rgb(1,2,3)', 42, null]) {
+    applySettings(settings, { colorNormal: bad });
+    assert.equal(settings.colorNormal, '#ff8800', 'refuse : ' + JSON.stringify(bad));
+  }
+
+  // La chaine vide est acceptee : elle rend la main au theme.
+  applySettings(settings, { colorNormal: '' });
+  assert.equal(settings.colorNormal, '');
+});

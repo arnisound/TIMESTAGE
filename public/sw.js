@@ -6,7 +6,7 @@
 // ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
 // URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v4';
+const VERSION = 'timestage-v5';
 const BASE = new URL('./', self.location).pathname;
 const at = (path) => BASE + path;
 
@@ -106,7 +106,7 @@ async function handleNavigation(request, url) {
 /** Les routes a code variable (/d/ABCDE) partagent la page de leur famille. */
 function normalizeRoute(pathname) {
   const route = pathname.startsWith(BASE) ? pathname.slice(BASE.length) : pathname.replace(/^\//, '');
-  if (route.startsWith('d/')) return at('display');
+  if (route.startsWith('d/') || route.startsWith('k/')) return at('display');
   if (route.startsWith('q/')) return at('ask');
   if (route.startsWith('c/')) return at('offline');
   return at('');

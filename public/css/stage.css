@@ -213,3 +213,24 @@
   z-index: 0;
 }
 .stage.blackout .stage-logo { visibility: hidden; }
+
+/* Fenetre video (incrustation) --------------------------------------------
+   Le chrono seul, sur fond transparent ou sur une couleur d'incrustation :
+   destine a une source navigateur dans un melangeur video (OBS, vMix…). */
+.stage.key-mode {
+  background: var(--key-bg, transparent);
+  padding: clamp(.3rem, 1vmin, 1rem);
+}
+.stage.key-mode .stage-top,
+.stage.key-mode .stage-bottom,
+.stage.key-mode .stage-progress,
+.stage.key-mode .stage-sub,
+.stage.key-mode .stage-overlay,
+.stage.key-mode .stage-flash { display: none; }
+.stage.key-mode[data-show~="title"] .stage-top { display: flex; }
+.stage.key-mode[data-show~="title"] .stage-clock { display: none; }
+.stage.key-mode[data-show~="sub"] .stage-sub { display: block; }
+.stage.key-mode[data-show~="progress"] .stage-progress { display: block; }
+.stage.key-mode[data-show~="message"] .stage-message { display: block; }
+/* Le texte porte souvent une ombre pour rester lisible sur l'image video. */
+.stage.key-mode[data-shadow="true"] .stage-time { text-shadow: 0 .04em .06em rgba(0, 0, 0, .65); }

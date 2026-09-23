@@ -7,13 +7,39 @@ import { LocalRoom } from './lib/localroom.js';
 import { formatDuration, formatLabel, parseDuration, MS } from '../shared/time.js';
 import { readTimer } from '../shared/timer.js';
 
+// Couleurs par defaut de chaque theme : elles amorcent les selecteurs, qui
+// ne savent pas representer « aucune couleur choisie ».
+const THEME_COLORS = {
+  brand: { colorNormal: '#e2ab52', colorText: '#f4f1ea' },
+  dark: { colorNormal: '#22c55e', colorText: '#f4f1ea' },
+  light: { colorNormal: '#22c55e', colorText: '#0f172a' },
+  contrast: { colorNormal: '#ffffff', colorText: '#ffffff' },
+};
+const PHASE_DEFAULTS = { colorWrapUp: '#facc15', colorFinal: '#ef4444', colorOverrun: '#ef4444' };
+const COLOR_FIELDS = {
+  '#color-normal': 'colorNormal',
+  '#color-wrapup': 'colorWrapUp',
+  '#color-final': 'colorFinal',
+  '#color-overrun': 'colorOverrun',
+  '#color-text': 'colorText',
+};
+
 const room = new LocalRoom();
 const isDisplayWindow = new URLSearchParams(location.search).get('view') === 'display';
 
 if (isDisplayWindow) {
   document.body.classList.add('offline-display');
-  document.title = 'Affichage hors ligne — TimeStage';
+  const keyMode = new URLSearchParams(location.search).get('key') === '1';
+  document.title = keyMode ? 'Chrono video — TimeStage' : 'Affichage hors ligne — TimeStage';
   const stage = createStage($('#full-stage'));
+  if (keyMode) {
+    document.body.classList.add('key-mode');
+    document.documentElement.classList.add('key-mode');
+    $('#full-stage').classList.add('key-mode');
+    const raw = (new URLSearchParams(location.search).get('bg') || 'transparent').toLowerCase();
+    const backgrounds = { transparent: 'transparent', green: '#00b140', magenta: '#ff00ff', blue: '#0047bb', black: '#000000', white: '#ffffff' };
+    $('#full-stage').style.setProperty('--key-bg', backgrounds[raw] || 'transparent');
+  }
   const loop = () => {
     $('#full-stage').dataset.theme = room.state.settings.theme || 'dark';
     stage.update(room.state, Date.now());
@@ -61,6 +87,7 @@ function initControl() {
 
     $('#theme-select').value = state.settings.theme || 'brand';
     renderTuning(state);
+    renderColors(state.settings);
     for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
     $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
     $('#message-state').textContent = state.message.visible ? "A l'ecran" : 'Masque';
@@ -278,6 +305,31 @@ function initControl() {
 
   $('#btn-logo-upload').addEventListener('click', pickLogo);
   $('#btn-logo-remove').addEventListener('click', () => apply('logo.set', { dataUrl: '' }));
+
+  // --- Couleurs du chrono ---------------------------------------------------
+
+  function renderColors(settings) {
+    const theme = THEME_COLORS[settings.theme] || THEME_COLORS.brand;
+    for (const [selector, key] of Object.entries(COLOR_FIELDS)) {
+      const node = $(selector);
+      if (document.activeElement === node) continue;
+      const value = settings[key] || theme[key] || PHASE_DEFAULTS[key] || '#ffffff';
+      if (node.value !== value) node.value = value;
+    }
+  }
+
+  for (const [selector, key] of Object.entries(COLOR_FIELDS)) {
+    const node = $(selector);
+    node.addEventListener('input', () => apply('settings.update', { patch: { [key]: node.value } }));
+  }
+  $('#btn-colors-reset').addEventListener('click', () =>
+    apply('settings.update', { patch: { colorNormal: '', colorWrapUp: '', colorFinal: '', colorOverrun: '', colorText: '' } })
+  );
+
+  $('#btn-open-video').addEventListener('click', () => {
+    const url = new URL(location.pathname + '?view=display&key=1', location.href);
+    window.open(url, 'timestage-offline-video', 'noopener');
+  });
 
   // --- Raccourcis -----------------------------------------------------------
   document.addEventListener('keydown', (event) => {

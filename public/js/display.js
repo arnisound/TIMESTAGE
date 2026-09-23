@@ -5,8 +5,13 @@ import { createStage } from './lib/stage.js';
 import { RoomConnection, readAccessFromUrl, rememberAccess } from './lib/net.js';
 
 const params = new URLSearchParams(location.search);
-const pathCode = location.pathname.match(/^\/d\/([A-Za-z0-9]{3,8})$/)?.[1];
-const code = (pathCode || params.get('room') || params.get('code') || '').toUpperCase();
+const pathMatch = location.pathname.match(/^\/([dk])\/([A-Za-z0-9]{3,8})$/);
+const code = (pathMatch?.[2] || params.get('room') || params.get('code') || '').toUpperCase();
+
+// Mode incrustation video : le chrono seul, sur fond transparent ou sur une
+// couleur d'incrustation. Destine a une source navigateur dans un melangeur.
+const keyMode = pathMatch?.[1] === 'k' || params.get('key') === '1';
+const KEY_BACKGROUNDS = { transparent: 'transparent', green: '#00b140', magenta: '#ff00ff', blue: '#0047bb', black: '#000000', white: '#ffffff' };
 
 const stageRoot = $('#stage');
 const statusChip = $('#status');
@@ -14,6 +19,19 @@ const statusText = $('#status-text');
 const stage = createStage(stageRoot);
 
 if (params.get('compact') === '1') stageRoot.dataset.compact = 'true';
+
+if (keyMode) {
+  document.body.classList.add('key-mode');
+  document.documentElement.classList.add('key-mode');
+  stageRoot.classList.add('key-mode');
+  const raw = (params.get('bg') || 'transparent').toLowerCase();
+  const background = KEY_BACKGROUNDS[raw] || (/^#?[0-9a-f]{6}$/.test(raw) ? (raw.startsWith('#') ? raw : '#' + raw) : 'transparent');
+  stageRoot.style.setProperty('--key-bg', background);
+  // « show » ajoute au chrono les elements demandes : title, sub, progress, message.
+  stageRoot.dataset.show = (params.get('show') || '').toLowerCase().split(/[,\s]+/).filter(Boolean).join(' ');
+  if (params.get('shadow') === '1') stageRoot.dataset.shadow = 'true';
+  document.title = `Chrono video ${code} — TimeStage`;
+}
 
 // --- Bandeau d'etat ---------------------------------------------------------
 let hudTimer = null;
@@ -37,7 +55,7 @@ function showHud(ms = 1200) {
 const wake = () => showHud(1600);
 document.addEventListener('mousemove', wake);
 document.addEventListener('touchstart', wake, { passive: true });
-showHud(1600);
+if (!keyMode) showHud(1600);
 
 if (!code) {
   showJoin();
@@ -99,7 +117,7 @@ function start(roomCode) {
               : 'Arrete';
     // En ligne : on confirme brievement puis on libere l'ecran.
     // Hors ligne : le bandeau reste, c'est une information utile a la regie.
-    showHud(status === 'online' ? 1200 : 0);
+    if (!keyMode) showHud(status === 'online' ? 1200 : 0);
   });
 
   conn.addEventListener('remote-error', (event) => {

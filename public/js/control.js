@@ -105,9 +105,12 @@ function render() {
 
   $('#auto-advance').checked = !!state.session.autoAdvance;
   $('#questions-open').checked = !!state.settings.questionsOpen;
+  $('#questions-chip').textContent = state.settings.questionsOpen ? 'Ouvertes' : 'Fermees';
+  $('#questions-chip').className = 'chip ' + (state.settings.questionsOpen ? 'ok' : '');
   $('#require-approval').checked = !!state.settings.requireApproval;
   $('#theme-select').value = state.settings.theme || 'brand';
   renderTuning(state.settings);
+  renderColors(state.settings);
   renderSecurity();
   for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
   $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
@@ -458,6 +461,71 @@ $('#btn-tune-reset').addEventListener('click', () => {
 const LOGO_KEY = 'timestage:logo:' + code;
 const ACCESS_KEY = 'timestage:access:' + code;
 
+// --- Sections de la regie ---------------------------------------------------
+// L'etat plie/deplie suit l'utilisateur d'une session a l'autre.
+const SECTIONS_KEY = 'timestage:sections';
+let openSections = null;
+try { openSections = JSON.parse(localStorage.getItem(SECTIONS_KEY) || 'null'); } catch { /* prive */ }
+for (const section of $$('details.section')) {
+  const name = section.dataset.section;
+  if (openSections && name in openSections) section.open = !!openSections[name];
+  section.addEventListener('toggle', () => {
+    const map = {};
+    for (const other of $$('details.section')) map[other.dataset.section] = other.open;
+    try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(map)); } catch { /* prive */ }
+  });
+}
+
+// --- Couleurs du chrono -----------------------------------------------------
+// Une couleur vide veut dire « celle du theme » : le selecteur natif ne sait
+// pas representer ce vide, on l'amorce donc avec la valeur du theme courant.
+const THEME_COLORS = {
+  brand: { colorNormal: '#e2ab52', colorText: '#f4f1ea' },
+  dark: { colorNormal: '#22c55e', colorText: '#f4f1ea' },
+  light: { colorNormal: '#22c55e', colorText: '#0f172a' },
+  contrast: { colorNormal: '#ffffff', colorText: '#ffffff' },
+};
+const PHASE_DEFAULTS = { colorWrapUp: '#facc15', colorFinal: '#ef4444', colorOverrun: '#ef4444' };
+const COLOR_FIELDS = {
+  '#color-normal': 'colorNormal',
+  '#color-wrapup': 'colorWrapUp',
+  '#color-final': 'colorFinal',
+  '#color-overrun': 'colorOverrun',
+  '#color-text': 'colorText',
+};
+
+function renderColors(settings) {
+  const theme = THEME_COLORS[settings.theme] || THEME_COLORS.brand;
+  for (const [selector, key] of Object.entries(COLOR_FIELDS)) {
+    const node = $(selector);
+    if (document.activeElement === node) continue;
+    const value = settings[key] || theme[key] || PHASE_DEFAULTS[key] || '#ffffff';
+    if (node.value !== value) node.value = value;
+    node.classList.toggle('is-default', !settings[key]);
+  }
+}
+
+for (const [selector, key] of Object.entries(COLOR_FIELDS)) {
+  const node = $(selector);
+  let timer = null;
+  const push = () => cmd('settings.update', { patch: { [key]: node.value } });
+  node.addEventListener('input', () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(push, 120);
+  });
+  node.addEventListener('change', () => {
+    if (timer) clearTimeout(timer);
+    push();
+  });
+}
+
+$('#btn-colors-reset').addEventListener('click', () => {
+  cmd('settings.update', {
+    patch: { colorNormal: '', colorWrapUp: '', colorFinal: '', colorOverrun: '', colorText: '' },
+  });
+  toast('Couleurs du theme retablies', 'ok');
+});
+
 // --- Securite de la session -------------------------------------------------
 const readAccess = () => { try { return localStorage.getItem(ACCESS_KEY) || ''; } catch { return ''; } };
 const writeAccess = (value) => { try { localStorage.setItem(ACCESS_KEY, value || ''); } catch { /* prive */ } };
@@ -626,6 +694,7 @@ function openShare(focus = null) {
   const grid = clear($('#qr-grid'));
   const cards = [
     { key: 'display', title: 'Affichage', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'Ecran de scene, retour, second appareil', url: urls.display },
+    { key: 'video', title: 'Chrono video (alpha)', hint: 'Source navigateur pour melangeur video', url: urls.video },
     { key: 'ask', title: 'Questions du public', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'A projeter ou imprimer', url: urls.ask },
     { key: 'control', title: 'Regie (cle incluse)', hint: 'Prendre la main depuis une tablette', url: urls.control },
   ].filter((card) => !focus || card.key === focus);

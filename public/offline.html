@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="/css/control.css">
 <style>
   body.offline-display { overflow: hidden; }
+  html.key-mode, body.key-mode { background: transparent; }
   body.offline-display #app { display: none; }
   #full-stage { display: none; height: 100dvh; }
   body.offline-display #full-stage { display: flex; }
@@ -33,6 +34,7 @@
     <span class="spacer"></span>
     <span class="chip" id="cache-chip">Disponible sans reseau</span>
     <button class="btn sm primary" id="btn-open-display">Ouvrir l'affichage</button>
+    <button class="btn sm" id="btn-open-video" title="Chrono seul sur fond transparent, pour un melangeur video">Fenetre video</button>
     <a class="btn sm ghost" href="/">Mode connecte</a>
   </header>
 
@@ -229,6 +231,16 @@
             <label for="logo-opacity">Opacite du logo <output id="logo-opacity-out">100 %</output></label>
             <input type="range" id="logo-opacity" min="10" max="100" step="5" value="100">
           </div>
+          <hr class="tune-sep">
+          <h3 class="panel-title" style="margin:.2rem 0 .4rem">Couleurs du chrono</h3>
+          <div class="color-grid">
+            <label class="color-field"><input type="color" id="color-normal"><span>En cours</span></label>
+            <label class="color-field"><input type="color" id="color-wrapup"><span>Seuil ambre</span></label>
+            <label class="color-field"><input type="color" id="color-final"><span>Seuil rouge</span></label>
+            <label class="color-field"><input type="color" id="color-overrun"><span>Depassement</span></label>
+            <label class="color-field"><input type="color" id="color-text"><span>Textes</span></label>
+          </div>
+          <button class="btn sm ghost block" type="button" id="btn-colors-reset" style="margin-top:.5rem">Couleurs du theme</button>
         </details>
         <p class="muted" style="margin:.7rem 0 0">
           <small>Tout reste dans ce navigateur. « Ouvrir l'affichage » lance une seconde fenetre synchronisee sur cet appareil, sans reseau.</small>

@@ -40,6 +40,11 @@ function defaultState() {
       logoPosition: 'top-right',
       logoSize: 12,
       logoOpacity: 100,
+      colorNormal: '',
+      colorWrapUp: '',
+      colorFinal: '',
+      colorOverrun: '',
+      colorText: '',
     },
     rev: 1,
   };

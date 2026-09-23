@@ -93,6 +93,21 @@ export function createStage(root) {
     // --- Phase et couleurs -------------------------------------------------
     const phase = view.phase;
     if (root.dataset.phase !== phase) root.dataset.phase = phase;
+
+    // Couleur choisie par la regie ; vide = celle du theme pour cette phase.
+    const custom = {
+      running: settings.colorNormal,
+      idle: settings.colorNormal,
+      paused: settings.colorNormal,
+      clock: settings.colorNormal,
+      wrapup: settings.colorWrapUp,
+      final: settings.colorFinal,
+      overrun: settings.colorOverrun,
+    }[phase] || '';
+    if (custom) root.style.setProperty('--stage-accent', custom);
+    else root.style.removeProperty('--stage-accent');
+    if (settings.colorText) root.style.setProperty('--stage-fg', settings.colorText);
+    else root.style.removeProperty('--stage-fg');
     root.dataset.running = String(!!timer.running);
     stateNode.textContent = timer.running ? PHASE_LABEL[phase] || '' : PHASE_LABEL[phase] === 'Heure' ? 'Heure' : timer.elapsedMs || phase === 'overrun' ? 'En pause' : 'Pret';
 

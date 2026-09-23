@@ -35,13 +35,14 @@ Variables d'environnement :
 | `HOST` | `0.0.0.0` | Interface d'écoute |
 | `TIMESTAGE_DATA` | `data/rooms.json` | Fichier de sauvegarde des salles ; `none` pour tout garder en mémoire |
 
-## Les quatre fenêtres
+## Les cinq fenêtres
 
 | Page | URL | Pour qui |
 | --- | --- | --- |
 | Accueil | `/` | Créer une session ou rejoindre une salle |
 | Régie | `/c/CODE` | La technique : pilote tout |
 | Affichage | `/d/CODE` | L'écran de scène ou le retour orateur |
+| Chrono vidéo | `/k/CODE` | Le chrono seul sur fond transparent, pour un mélangeur vidéo |
 | Questions | `/q/CODE` | Le public, depuis son téléphone |
 | Hors ligne | `/offline` | Chrono local, sans serveur |
 
@@ -73,6 +74,16 @@ demande simplement de coller ce lien.
 - Presets modifiables (« Merci de conclure », « Parlez plus fort »…).
 - Message libre, quatre styles, clignotement, masquage automatique.
 
+**Chrono vidéo (incrustation)**
+- `/k/CODE` affiche **le chrono seul sur fond transparent** : à ouvrir comme
+  source navigateur dans OBS, vMix ou tout mélangeur qui gère l'alpha.
+- Pour un mélangeur sans canal alpha, `?bg=green` (ou `magenta`, `blue`,
+  `black`, `white`, ou `?bg=00b140`) donne un fond uni à incruster.
+- `?show=title,sub,progress,message` ajoute au chrono les éléments voulus,
+  `?shadow=1` pose une ombre portée pour rester lisible sur l'image.
+- Aucun bandeau d'état ne s'affiche dans cette fenêtre : rien d'autre que ce
+  qui doit passer à l'antenne.
+
 **Sécurité de la session**
 - **Code d'accès** optionnel par salle : sans lui, toute personne connaissant le
   code de salle peut ouvrir l'affichage et envoyer des questions ; avec lui,
@@ -98,6 +109,8 @@ demande simplement de coller ce lien.
   clair / contraste maximal, écran noir instantané.
 - Titre, intervenant, heure du jour, barre de progression et partie suivante
   activables séparément.
+- **Couleurs du chrono** au choix : en cours, seuil ambre, seuil rouge,
+  dépassement et textes. Laisser une couleur vide rend la main au thème.
 - **Personnalisation depuis la régie** : taille du chrono, position (haut,
   centre, bas), taille des textes secondaires, et logo de l'événement — le
   vôtre, téléversé depuis la régie, ou celui de TimeStage — placé **au-dessus
@@ -114,6 +127,10 @@ demande simplement de coller ce lien.
 - Chrono complet, formats, messages, déroulé local — le tout dans le navigateur.
 - « Ouvrir l'affichage » lance une seconde fenêtre (second écran, vidéoprojecteur)
   synchronisée par `BroadcastChannel`, toujours sans réseau.
+
+La fenêtre de régie est organisée en sections repliables — chronomètre toujours
+visible, puis mode & format, déroulé, affichage, message, sécurité et questions.
+L'état plié ou déplié de chacune est retenu d'une session à l'autre.
 
 ## Raccourcis clavier (régie)
 

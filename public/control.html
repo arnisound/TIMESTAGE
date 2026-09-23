@@ -88,8 +88,8 @@
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head"><h2 class="panel-title">Mode &amp; format</h2><span class="chip mono" id="format-label">MM:SS</span></div>
+    <details class="panel section" data-section="format">
+      <summary class="panel-head"><h2 class="panel-title">Mode &amp; format</h2><span class="chip mono" id="format-label">MM:SS</span></summary>
       <div class="seg" id="mode-seg" role="group" aria-label="Mode du chronometre">
         <button type="button" data-mode="countdown" aria-pressed="true">Compte a rebours</button>
         <button type="button" data-mode="countup" aria-pressed="false">Chronometre</button>
@@ -145,16 +145,16 @@
       <label class="check" style="margin-top:.5rem">
         <input type="checkbox" id="overrun-input"> Continuer en negatif apres zero
       </label>
-    </section>
+    </details>
   </div>
 
   <!-- Colonne 2 : deroule -->
   <div class="col-stack">
-    <section class="panel">
-      <div class="panel-head">
+    <details class="panel section" open data-section="deroule">
+      <summary class="panel-head">
         <h2 class="panel-title">Deroule de la session</h2>
         <span class="chip" id="parts-count">0 partie</span>
-      </div>
+      </summary>
       <div class="row tight">
         <button class="btn sm" id="btn-prev">← Precedente</button>
         <button class="btn sm" id="btn-next">Suivante →</button>
@@ -181,10 +181,10 @@
         <button class="btn sm ghost" id="btn-import">Importer</button>
         <button class="btn sm danger" id="btn-clear-parts" style="margin-left:auto">Vider</button>
       </div>
-    </section>
+    </details>
 
-    <section class="panel">
-      <div class="panel-head"><h2 class="panel-title">Affichage</h2></div>
+    <details class="panel section" data-section="affichage">
+      <summary class="panel-head"><h2 class="panel-title">Affichage</h2></summary>
       <div class="field">
         <label for="display-name">Nom affiche sur l'ecran</label>
         <input type="text" id="display-name" maxlength="80" placeholder="Optionnel">
@@ -208,8 +208,9 @@
       </div>
       <button class="btn block" id="btn-blackout" style="margin-top:.7rem" aria-pressed="false">Ecran noir</button>
 
-      <details class="tune" id="tune">
-        <summary>Personnaliser l'affichage</summary>
+      <div class="tune" id="tune">
+        <hr class="tune-sep">
+        <h3 class="panel-title" style="margin:.2rem 0 0">Personnalisation</h3>
 
         <div class="tune-row">
           <label for="timer-scale">Taille du chrono <output id="timer-scale-out">100 %</output></label>
@@ -271,18 +272,29 @@
           <input type="range" id="logo-opacity" min="10" max="100" step="5" value="100">
         </div>
 
+        <hr class="tune-sep">
+        <h3 class="panel-title" style="margin:.2rem 0 .4rem">Couleurs du chrono</h3>
+        <div class="color-grid">
+          <label class="color-field"><input type="color" id="color-normal"><span>En cours</span></label>
+          <label class="color-field"><input type="color" id="color-wrapup"><span>Seuil ambre</span></label>
+          <label class="color-field"><input type="color" id="color-final"><span>Seuil rouge</span></label>
+          <label class="color-field"><input type="color" id="color-overrun"><span>Depassement</span></label>
+          <label class="color-field"><input type="color" id="color-text"><span>Textes</span></label>
+        </div>
+        <button class="btn sm ghost block" type="button" id="btn-colors-reset" style="margin-top:.5rem">Couleurs du theme</button>
+
         <button class="btn sm ghost block" type="button" id="btn-tune-reset" style="margin-top:.6rem">Revenir aux reglages par defaut</button>
-      </details>
-    </section>
+      </div>
+    </details>
   </div>
 
   <!-- Colonne 3 : messages et questions -->
   <div class="col-stack">
-    <section class="panel">
-      <div class="panel-head">
+    <details class="panel section" open data-section="message">
+      <summary class="panel-head">
         <h2 class="panel-title">Message a l'ecran</h2>
         <span class="chip" id="message-state">Masque</span>
-      </div>
+      </summary>
       <div class="preset-grid" id="presets"></div>
       <form id="message-form" class="stack" style="margin-top:.7rem">
         <div class="field">
@@ -317,13 +329,13 @@
           <button class="btn sm ghost" type="button" id="btn-save-preset">+ Preset</button>
         </div>
       </form>
-    </section>
+    </details>
 
-    <section class="panel">
-      <div class="panel-head">
+    <details class="panel section" data-section="securite">
+      <summary class="panel-head">
         <h2 class="panel-title">Securite de la session</h2>
         <span class="chip" id="security-state">Salle ouverte</span>
-      </div>
+      </summary>
       <p class="muted" style="margin:0 0 .6rem"><small>
         Sans code d'acces, toute personne connaissant le code de salle peut ouvrir l'affichage
         et envoyer des questions. Avec un code, l'affichage et le public doivent le saisir —
@@ -342,13 +354,14 @@
         <div><strong style="font-size:.88rem">Cle de regie</strong><br><small class="muted">Renouveler coupe l'acces a tous les liens de regie deja distribues.</small></div>
         <button class="btn sm danger" id="btn-rotate-key">Renouveler</button>
       </div>
-    </section>
+    </details>
 
-    <section class="panel">
-      <div class="panel-head">
+    <details class="panel section" open data-section="questions">
+      <summary class="panel-head">
         <h2 class="panel-title">Questions du public</h2>
-        <label class="check"><input type="checkbox" id="questions-open"> Ouvertes</label>
-      </div>
+        <span class="chip" id="questions-chip">Ouvertes</span>
+      </summary>
+      <label class="check" style="margin-bottom:.5rem"><input type="checkbox" id="questions-open"> Accepter les questions</label>
       <div class="row between">
         <div class="tabs" id="q-tabs" role="tablist">
           <button role="tab" data-tab="pending" aria-selected="true">En attente <span id="count-pending">0</span></button>
@@ -362,7 +375,7 @@
         <label class="check"><input type="checkbox" id="require-approval"> Validation obligatoire</label>
         <button class="btn sm danger" id="btn-clear-questions" style="margin-left:auto">Effacer</button>
       </div>
-    </section>
+    </details>
   </div>
 </main>
 

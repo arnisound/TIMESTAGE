@@ -14,7 +14,12 @@
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/stage.css">
 <style>
-  html, body { height: 100%; overflow: hidden; background: #05070c; }
+  html, body { height: 100%; overflow: hidden; background: #08080b; }
+  /* Fenetre video : html et body doivent etre transparents pour que la source
+     navigateur du melangeur recupere le canal alpha. Le fond de la scene, lui,
+     reste gere par stage.css — un selecteur d'identifiant ici ecraserait la
+     couleur d'incrustation choisie (?bg=green). */
+  html.key-mode, body.key-mode { background: transparent; }
   #stage { height: 100dvh; }
   .hud {
     position: fixed; top: 0; right: 0; z-index: 10;

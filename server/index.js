@@ -80,6 +80,8 @@ app.get('/offline', page('offline.html'));
 app.get('/c/:code', page('control.html'));
 app.get('/d/:code', page('display.html'));
 app.get('/q/:code', page('ask.html'));
+// Fenetre video : le chrono seul, pour une source navigateur de melangeur.
+app.get('/k/:code', page('display.html'));
 
 // --- API --------------------------------------------------------------------
 app.get('/api/health', (req, res) => {

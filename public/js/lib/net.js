@@ -185,6 +185,7 @@ export function roomUrls(code, token = null, access = null) {
   const tail = access ? `#a=${encodeURIComponent(access)}` : '';
   return {
     display: `${base}/d/${code}${tail}`,
+    video: `${base}/k/${code}${tail}`,
     ask: `${base}/q/${code}${tail}`,
     control: token ? `${base}/c/${code}#t=${encodeURIComponent(token)}` : `${base}/c/${code}`,
   };
