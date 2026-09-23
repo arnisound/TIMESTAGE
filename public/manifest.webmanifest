@@ -10,11 +10,41 @@
   "theme_color": "#0b0e14",
   "lang": "fr",
   "icons": [
-    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Chrono hors ligne", "short_name": "Hors ligne", "url": "/offline" },
-    { "name": "Nouvelle session", "short_name": "Nouvelle", "url": "/" }
+    {
+      "name": "Chrono hors ligne",
+      "short_name": "Hors ligne",
+      "url": "/offline"
+    },
+    {
+      "name": "Nouvelle session",
+      "short_name": "Nouvelle",
+      "url": "/"
+    }
   ]
 }

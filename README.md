@@ -110,6 +110,7 @@ demande simplement de coller ce lien.
 ## Architecture
 
 ```
+brand/               Logo source (SVG d'origine, texte vectorisable)
 scripts/build-static.mjs  Génère dist/ : version statique (chrono hors ligne)
 server/index.js      HTTP, API REST, WebSocket, service des fichiers statiques
 server/rooms.js      État des salles, commandes, modération, persistance
@@ -247,6 +248,22 @@ Servez l'application en HTTPS : le mode hors ligne (service worker), le plein
 écran et le Wake Lock l'exigent en dehors de `localhost`.
 
 Les salles inactives depuis 48 h sont purgées automatiquement.
+
+## Identité visuelle
+
+Le logo source est dans `brand/timestage-logo.svg`. Son texte utilise la police
+Arial Rounded MT Bold : pour éviter toute dépendance à une police installée,
+l'application utilise deux dérivés générés depuis cette source :
+
+- `public/icons/icon.svg` — la marque **sans texte** (badge, anneau doré, onde,
+  aiguilles) : favicon et pastille dans les barres de titre, lisible jusqu'à 32 px ;
+- `public/icons/logo.png` et les icônes 192/512 — le logo complet en matriciel,
+  fidèle au fichier d'origine, pour l'accueil et l'installation en application.
+
+Pour les régénérer après une modification du logo, voir les dérivés listés
+ci-dessus : la marque sans texte se reconstruit en retirant les groupes `<text>`
+du SVG source (en conservant `fill-rule:evenodd` sur la racine, sinon les
+anneaux se remplissent en disques pleins).
 
 ## Licence
 

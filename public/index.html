@@ -7,12 +7,20 @@
 <meta name="description" content="Chronometre de scene : fenetre de regie, affichage plein ecran, partage par QR code, messages a l'orateur, questions du public et mode hors ligne.">
 <meta name="theme-color" content="#0b0e14">
 <link rel="manifest" href="/manifest.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TimeStage">
+<meta property="og:title" content="TimeStage — chronometre de scene">
+<meta property="og:description" content="Regie et affichage synchronises, partage par QR code, messages a l'orateur, questions du public et mode hors ligne.">
+<meta property="og:image" content="/icons/logo.png">
+<meta name="twitter:card" content="summary">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/base.css">
 <style>
   .wrap { max-width: 62rem; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
   .hero { display: grid; gap: 1rem; padding: 2.5rem 0 1.5rem; }
   .hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); letter-spacing: -.02em; }
+  .hero-logo { width: clamp(88px, 14vw, 132px); height: auto; margin-bottom: -.4rem; }
   .hero p.lead { font-size: 1.05rem; color: var(--muted); max-width: 42rem; }
   .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .8rem; margin-top: .5rem; }
   .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 2rem; }
@@ -27,7 +35,7 @@
 <body>
 <div class="wrap">
   <header class="site-head">
-    <span class="brand"><img src="/icons/icon.svg" alt="" width="24" height="24"> TimeStage</span>
+    <span class="brand"><img src="/icons/icon.svg" alt="" width="28" height="28"> TimeStage</span>
     <nav class="row tight">
       <a class="btn sm ghost" href="/offline">Mode hors ligne</a>
       <a class="btn sm ghost" href="https://github.com/arnisound/timestage" rel="noopener">Code source</a>
@@ -35,6 +43,7 @@
   </header>
 
   <section class="hero">
+    <img src="/icons/logo.png" alt="TimeStage" class="hero-logo" width="132" height="132">
     <h1>Le chronometre de scene, de la regie a l'ecran.</h1>
     <p class="lead">
       Une fenetre de regie, un affichage plein ecran, et tout ce qu'il faut autour :
