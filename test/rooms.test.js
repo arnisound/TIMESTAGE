@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo } from '../server/rooms.js';
+import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo, setAccessCode, checkAccess, rotateOwnerToken } from '../server/rooms.js';
 import { MS } from '../shared/time.js';
 
 const newRoom = () => new RoomStore().create('Test').room;
@@ -258,4 +258,58 @@ test('le logo refuse les formats et les tailles hors limites', () => {
   assert.equal(setRoomLogo(room, '').ok, false);
   assert.equal(setRoomLogo(room, pngDataUrl(500 * 1024)).ok, false, 'trop lourd');
   assert.equal(setRoomLogo(room, 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=').ok, true);
+});
+
+test('le code d acces protege la salle sans jamais etre expose', () => {
+  const room = newRoom();
+  assert.equal(checkAccess(room, ''), true, 'salle ouverte par defaut');
+  assert.equal(publicState(room).hasAccessCode, false);
+
+  assert.equal(setAccessCode(room, 'abc').ok, false, 'trop court');
+  assert.equal(setAccessCode(room, 'x'.repeat(40)).ok, false, 'trop long');
+
+  assert.equal(setAccessCode(room, 'decibel2026').ok, true);
+  assert.equal(checkAccess(room, 'decibel2026'), true);
+  assert.equal(checkAccess(room, 'Decibel2026'), false, 'sensible a la casse');
+  assert.equal(checkAccess(room, ''), false);
+  assert.equal(checkAccess(room, null), false);
+  assert.equal(checkAccess(room, ' decibel2026 '), true, 'espaces ignores');
+
+  // Ni le secret ni son empreinte ne sortent dans l'etat.
+  const state = publicState(room);
+  assert.equal(state.access, undefined);
+  assert.equal(state.hasAccessCode, true);
+  assert.equal(JSON.stringify(state).includes('decibel2026'), false);
+  assert.equal(JSON.stringify(state).includes(room.access.hash), false);
+  assert.equal(JSON.stringify(viewerState(room)).includes(room.access.salt), false);
+
+  // Le stockage est hache et sale.
+  assert.notEqual(room.access.hash, 'decibel2026');
+  assert.equal(room.access.hash.length, 64);
+  const other = newRoom();
+  setAccessCode(other, 'decibel2026');
+  assert.notEqual(other.access.hash, room.access.hash, 'deux sels, deux empreintes');
+
+  assert.equal(setAccessCode(room, '').ok, true);
+  assert.equal(checkAccess(room, ''), true, 'salle rouverte');
+});
+
+test('renouveler la cle de regie invalide l ancienne', () => {
+  const store = new RoomStore();
+  const room = store.create().room;
+  const first = room.ownerToken;
+
+  const second = rotateOwnerToken(room);
+  assert.notEqual(second, first);
+  assert.equal(store.isOwner(room, first), false, 'l ancienne cle ne vaut plus rien');
+  assert.equal(store.isOwner(room, second), true);
+  assert.equal(publicState(room).ownerToken, undefined);
+});
+
+test('la commande de regie pose et retire le code d acces', () => {
+  const room = newRoom();
+  assert.equal(applyCommand(room, 'room.setAccessCode', { code: 'scene-2026' }).ok, true);
+  assert.equal(checkAccess(room, 'scene-2026'), true);
+  assert.equal(applyCommand(room, 'room.setAccessCode', { code: 'no' }).ok, false, 'trop court : refuse');
+  assert.equal(checkAccess(room, 'scene-2026'), true, 'l ancien code tient toujours');
 });

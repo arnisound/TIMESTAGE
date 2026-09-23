@@ -156,6 +156,114 @@ test('le logo : envoi reserve a la regie, service et retrait', async () => {
   assert.equal((await fetch(`${base}/api/rooms/${room.code}/logo`)).status, 404);
 });
 
+test('une salle protegee refuse l entree sans le bon code', async () => {
+  const room = await createRoom('Protegee');
+
+  // La regie pose le code.
+  const control = connect();
+  await control.open();
+  control.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  await control.next((m) => m.t === 'welcome');
+  control.send({ t: 'cmd', name: 'room.setAccessCode', payload: { code: 'motdepasse' } });
+  await control.next((m) => m.t === 'state' && m.state.hasAccessCode);
+
+  // Un ecran sans code est refuse.
+  const intrus = connect();
+  await intrus.open();
+  intrus.send({ t: 'hello', room: room.code, role: 'display' });
+  const refus = await intrus.next((m) => m.t === 'error');
+  assert.equal(refus.code, 'access_denied');
+  intrus.close();
+
+  // Mauvais code : meme refus.
+  const faux = connect();
+  await faux.open();
+  faux.send({ t: 'hello', room: room.code, role: 'display', access: 'autre' });
+  assert.equal((await faux.next((m) => m.t === 'error')).code, 'access_denied');
+  faux.close();
+
+  // Bon code : entree acceptee.
+  const ecran = connect();
+  await ecran.open();
+  ecran.send({ t: 'hello', room: room.code, role: 'display', access: 'motdepasse' });
+  const welcome = await ecran.next((m) => m.t === 'welcome');
+  assert.equal(welcome.role, 'display');
+  ecran.close();
+
+  // La regie entre avec sa cle, sans connaitre le code d'acces.
+  const regie2 = connect();
+  await regie2.open();
+  regie2.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  assert.equal((await regie2.next((m) => m.t === 'welcome')).role, 'control');
+  regie2.close();
+  control.close();
+});
+
+test('une salle protegee ne revele rien et filtre les questions', async () => {
+  const room = await createRoom('Discrete');
+  const control = connect();
+  await control.open();
+  control.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  await control.next((m) => m.t === 'welcome');
+  control.send({ t: 'cmd', name: 'room.setAccessCode', payload: { code: 'chutchut' } });
+  await control.next((m) => m.t === 'state' && m.state.hasAccessCode);
+
+  const info = await (await fetch(`${base}/api/rooms/${room.code}`)).json();
+  assert.equal(info.protected, true);
+  assert.equal(info.name, undefined, 'le nom de session ne fuite pas');
+  assert.equal(info.displayName, undefined);
+
+  const sansCode = await post(`/api/rooms/${room.code}/questions`, { text: 'Je passe en force ?' });
+  assert.equal(sansCode.status, 403);
+  assert.equal((await sansCode.json()).code, 'access_denied');
+
+  const avecCode = await post(`/api/rooms/${room.code}/questions`, { text: 'Une vraie question ?', access: 'chutchut' });
+  assert.equal(avecCode.status, 201);
+  control.close();
+});
+
+test('renouveler la cle ejecte les autres regies, pas celle qui demande', async () => {
+  const room = await createRoom('Rotation');
+
+  const demandeur = connect();
+  await demandeur.open();
+  demandeur.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  await demandeur.next((m) => m.t === 'welcome');
+
+  const autre = connect();
+  await autre.open();
+  autre.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  await autre.next((m) => m.t === 'welcome');
+
+  demandeur.send({ t: 'cmd', name: 'room.rotateKey', payload: {} });
+  const key = await demandeur.next((m) => m.t === 'key');
+  assert.ok(key.ownerToken);
+  assert.notEqual(key.ownerToken, room.ownerToken);
+
+  // L'autre regie est prevenue et perd la main.
+  assert.equal((await autre.next((m) => m.t === 'error')).code, 'forbidden');
+  autre.close();
+
+  // Celle qui a demande continue de piloter sans se reconnecter.
+  demandeur.send({ t: 'cmd', name: 'timer.start' });
+  const state = await demandeur.next((m) => m.t === 'state' && m.state.timer.running);
+  assert.equal(state.state.timer.running, true);
+  demandeur.close();
+
+  // L'ancienne cle ne permet plus d'entrer, la nouvelle si.
+  const ancien = connect();
+  await ancien.open();
+  ancien.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  assert.equal((await ancien.next((m) => m.t === 'error')).code, 'forbidden');
+  ancien.close();
+
+  const nouveau = connect();
+  await nouveau.open();
+  nouveau.send({ t: 'hello', room: room.code, role: 'control', token: key.ownerToken });
+  assert.equal((await nouveau.next((m) => m.t === 'welcome')).role, 'control');
+  nouveau.close();
+});
+
 test('la regie pilote, l affichage suit', async () => {
   const room = await createRoom('Demo');
 

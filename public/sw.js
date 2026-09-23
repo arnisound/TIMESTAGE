@@ -6,7 +6,7 @@
 // ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
 // URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v3';
+const VERSION = 'timestage-v4';
 const BASE = new URL('./', self.location).pathname;
 const at = (path) => BASE + path;
 
@@ -34,6 +34,8 @@ const SHELL = [
   'icons/icon.svg',
   'icons/icon-maskable.svg',
   'icons/logo.png',
+  'icons/favicon-32.png',
+  'icons/favicon-16.png',
   'icons/icon-192.png',
   'icons/apple-touch-icon.png',
   'manifest.webmanifest',

@@ -194,6 +194,15 @@
 .stage-logo[data-pos="top-right"] { top: clamp(.6rem, 2vmin, 2rem); right: clamp(.6rem, 2vmin, 2rem); }
 .stage-logo[data-pos="bottom-left"] { bottom: clamp(.6rem, 2vmin, 2rem); left: clamp(.6rem, 2vmin, 2rem); }
 .stage-logo[data-pos="bottom-right"] { bottom: clamp(.6rem, 2vmin, 2rem); right: clamp(.6rem, 2vmin, 2rem); }
+/* Dans le flux, au-dessus ou en dessous du chrono : aucun recouvrement. */
+.stage-logo[data-pos="above"],
+.stage-logo[data-pos="below"] {
+  position: static;
+  flex: 0 0 auto;
+  align-self: center;
+  max-width: 70%;
+  margin: .15em 0;
+}
 /* Filigrane : derriere le chrono, centre. */
 .stage-logo[data-pos="center"] {
   top: 50%;

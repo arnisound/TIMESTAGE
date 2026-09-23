@@ -54,7 +54,9 @@ export function createStage(root) {
   const fit = (force = false) => {
     const text = timeNode.textContent || '';
     const width = mainNode.clientWidth || root.clientWidth || window.innerWidth;
-    const height = mainNode.clientHeight || root.clientHeight || window.innerHeight;
+    // Un logo place dans le flux prend de la hauteur : elle sort du budget.
+    const inFlowLogo = logoNode.parentElement === mainNode && !logoNode.hidden ? logoNode.offsetHeight : 0;
+    const height = Math.max(40, (mainNode.clientHeight || root.clientHeight || window.innerHeight) - inFlowLogo);
     const scale = Number(root.dataset.timerScale) || 1;
     const key = `${text.length}|${width}|${height}|${scale}`;
     if (!force && key === lastFit) return;
@@ -167,11 +169,29 @@ export function createStage(root) {
     if (logoSrc) {
       if (logoNode.getAttribute('src') !== logoSrc) logoNode.setAttribute('src', logoSrc);
       logoNode.hidden = false;
-      logoNode.dataset.pos = settings.logoPosition || 'top-right';
+      const position = settings.logoPosition || 'top-right';
+      logoNode.dataset.pos = position;
+      // « Au-dessus » et « en dessous » placent le logo dans le flux : le chrono
+      // se reduit pour lui laisser la place au lieu d'etre recouvert.
+      if (position === 'above' || position === 'below') {
+        const first = position === 'above';
+        const misplaced =
+          logoNode.parentElement !== mainNode ||
+          (first ? mainNode.firstChild !== logoNode : mainNode.lastChild !== logoNode);
+        if (misplaced) {
+          if (first) mainNode.prepend(logoNode);
+          else mainNode.append(logoNode);
+          fit(true);
+        }
+      } else if (logoNode.parentElement !== root) {
+        root.append(logoNode);
+        fit(true);
+      }
       root.style.setProperty('--logo-size', clampNumber(settings.logoSize, 4, 60, 12) + '%');
       root.style.setProperty('--logo-opacity', clampNumber(settings.logoOpacity, 10, 100, 100) / 100);
-    } else {
+    } else if (!logoNode.hidden) {
       logoNode.hidden = true;
+      fit(true);
     }
 
     // --- Ecran noir --------------------------------------------------------

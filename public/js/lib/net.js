@@ -3,11 +3,12 @@
 // valeur a quelques millisecondes pres).
 
 export class RoomConnection extends EventTarget {
-  constructor({ code, role = 'viewer', token = null } = {}) {
+  constructor({ code, role = 'viewer', token = null, access = null } = {}) {
     super();
     this.code = String(code || '').toUpperCase();
     this.role = role;
     this.token = token;
+    this.access = access; // code d'acces de la salle, si elle est protegee
     this.ws = null;
     this.state = null;
     this.status = 'idle'; // idle | connecting | online | offline
@@ -48,7 +49,7 @@ export class RoomConnection extends EventTarget {
 
     ws.addEventListener('open', () => {
       this.attempt = 0;
-      this.send({ t: 'hello', room: this.code, role: this.role, token: this.token });
+      this.send({ t: 'hello', room: this.code, role: this.role, token: this.token, access: this.access });
       this.startPing();
     });
 
@@ -101,6 +102,11 @@ export class RoomConnection extends EventTarget {
         this.dispatchEvent(new CustomEvent('remote-error', { detail: msg }));
         if (msg.code === 'forbidden') {
           // Jeton invalide : inutile d'insister.
+          this.closedByUser = true;
+          this.ws?.close();
+          this.setStatus('idle', msg.code);
+        } else if (msg.code === 'access_denied' || msg.code === 'rate_limited') {
+          // Inutile de marteler le serveur : on attend le bon code.
           this.closedByUser = true;
           this.ws?.close();
           this.setStatus('idle', msg.code);
@@ -172,11 +178,32 @@ export class RoomConnection extends EventTarget {
 }
 
 /** Construit les URL partageables de la salle. */
-export function roomUrls(code, token = null) {
+export function roomUrls(code, token = null, access = null) {
   const base = location.origin;
+  // Le code d'acces voyage dans le fragment : il n'est pas envoye au serveur
+  // dans l'URL, donc il ne finit ni dans les journaux ni dans les referers.
+  const tail = access ? `#a=${encodeURIComponent(access)}` : '';
   return {
-    display: `${base}/d/${code}`,
-    ask: `${base}/q/${code}`,
+    display: `${base}/d/${code}${tail}`,
+    ask: `${base}/q/${code}${tail}`,
     control: token ? `${base}/c/${code}#t=${encodeURIComponent(token)}` : `${base}/c/${code}`,
   };
+}
+
+/** Lit le code d'acces d'une URL (#a=… ou ?a=…) puis le retire de la barre. */
+export function readAccessFromUrl(roomCode) {
+  const key = 'timestage:access:' + roomCode;
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(location.search);
+  const found = hash.get('a') || query.get('a');
+  if (found) {
+    try { localStorage.setItem(key, found); } catch { /* mode prive */ }
+    history.replaceState(null, '', location.pathname);
+    return found;
+  }
+  try { return localStorage.getItem(key) || ''; } catch { return ''; }
+}
+
+export function rememberAccess(roomCode, access) {
+  try { localStorage.setItem('timestage:access:' + roomCode, access || ''); } catch { /* prive */ }
 }

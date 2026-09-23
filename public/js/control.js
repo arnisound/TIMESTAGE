@@ -108,6 +108,7 @@ function render() {
   $('#require-approval').checked = !!state.settings.requireApproval;
   $('#theme-select').value = state.settings.theme || 'brand';
   renderTuning(state.settings);
+  renderSecurity();
   for (const input of $$('[data-setting]')) input.checked = !!state.settings[input.dataset.setting];
   $('#btn-blackout').setAttribute('aria-pressed', String(!!state.settings.blackout));
   $('#btn-blackout').textContent = state.settings.blackout ? 'Quitter l\'ecran noir' : 'Ecran noir';
@@ -455,6 +456,52 @@ $('#btn-tune-reset').addEventListener('click', () => {
 });
 
 const LOGO_KEY = 'timestage:logo:' + code;
+const ACCESS_KEY = 'timestage:access:' + code;
+
+// --- Securite de la session -------------------------------------------------
+const readAccess = () => { try { return localStorage.getItem(ACCESS_KEY) || ''; } catch { return ''; } };
+const writeAccess = (value) => { try { localStorage.setItem(ACCESS_KEY, value || ''); } catch { /* prive */ } };
+
+function renderSecurity() {
+  const on = !!state?.hasAccessCode;
+  const chip = $('#security-state');
+  chip.textContent = on ? 'Salle protegee' : 'Salle ouverte';
+  chip.className = 'chip ' + (on ? 'ok' : 'warn');
+  if (document.activeElement !== $('#access-input')) $('#access-input').value = on ? readAccess() : '';
+  $('#btn-access-clear').disabled = !on;
+}
+
+$('#access-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const value = $('#access-input').value.trim();
+  if (value.length < 4) return toast('Le code doit faire au moins 4 caracteres.', 'error');
+  writeAccess(value);
+  urls = roomUrls(code, token, value);
+  cmd('room.setAccessCode', { code: value });
+  toast('Salle protegee. Les QR codes contiennent le code.', 'ok', 6000);
+});
+
+$('#btn-access-clear').addEventListener('click', () => {
+  if (!confirm('Retirer le code d\'acces ? La salle redeviendra ouverte a qui connait son code.')) return;
+  writeAccess('');
+  urls = roomUrls(code, token, null);
+  cmd('room.setAccessCode', { code: '' });
+});
+
+$('#btn-rotate-key').addEventListener('click', () => {
+  if (!confirm('Renouveler la cle de regie ? Les liens de regie deja partages cesseront de fonctionner.')) return;
+  cmd('room.rotateKey', {});
+});
+
+// Le serveur renvoie la nouvelle cle a la seule regie qui l'a demandee.
+conn.addEventListener('message', (event) => {
+  if (event.detail.t !== 'key' || !event.detail.ownerToken) return;
+  token = event.detail.ownerToken;
+  try { localStorage.setItem(tokenKey, token); } catch { /* prive */ }
+  conn.token = token;
+  urls = roomUrls(code, token, readAccess() || null);
+  toast('Cle renouvelee. Repartagez le QR code de regie.', 'ok', 7000);
+});
 
 /**
  * Prepare l'image : les matriciels sont redimensionnes a 512 px de cote, ce qui
@@ -569,7 +616,7 @@ $('#btn-clear-questions').addEventListener('click', () => {
 });
 
 // --- Partage ----------------------------------------------------------------
-let urls = roomUrls(code, token);
+let urls = roomUrls(code, token, (() => { try { return localStorage.getItem('timestage:access:' + code) || null; } catch { return null; } })());
 $('#btn-open-display').addEventListener('click', () => window.open(urls.display, 'timestage-display-' + code, 'noopener'));
 $('#btn-qr-ask').addEventListener('click', () => openShare('ask'));
 $('#btn-share').addEventListener('click', () => openShare());
@@ -578,8 +625,8 @@ function openShare(focus = null) {
   $('#share-code').textContent = code;
   const grid = clear($('#qr-grid'));
   const cards = [
-    { key: 'display', title: 'Affichage', hint: 'Ecran de scene, retour, second appareil', url: urls.display },
-    { key: 'ask', title: 'Questions du public', hint: 'A projeter ou imprimer', url: urls.ask },
+    { key: 'display', title: 'Affichage', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'Ecran de scene, retour, second appareil', url: urls.display },
+    { key: 'ask', title: 'Questions du public', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'A projeter ou imprimer', url: urls.ask },
     { key: 'control', title: 'Regie (cle incluse)', hint: 'Prendre la main depuis une tablette', url: urls.control },
   ].filter((card) => !focus || card.key === focus);
 
@@ -625,6 +672,7 @@ function saveSnapshot(current) {
     autoAdvance: current.session.autoAdvance,
     settings: current.settings,
     presets: current.presets,
+    hadAccessCode: !!current.hasAccessCode,
     timer: {
       mode: t.mode,
       durationMs: t.durationMs,
@@ -662,6 +710,8 @@ function replaySnapshot(snapshot) {
   if (snapshot.autoAdvance) cmd('session.set', { autoAdvance: true });
   if (snapshot.settings) cmd('settings.update', { patch: snapshot.settings });
   if (snapshot.presets?.length) cmd('message.presets.set', { presets: snapshot.presets });
+  const savedAccess = readAccess();
+  if (savedAccess && snapshot.hadAccessCode) cmd('room.setAccessCode', { code: savedAccess });
   // Le logo televerse vit sur le serveur : on le renvoie apres une recreation.
   let storedLogo = null;
   try { storedLogo = localStorage.getItem(LOGO_KEY); } catch { /* prive */ }

@@ -2,7 +2,7 @@
 // Tout est garde en memoire et sauvegarde periodiquement sur disque pour
 // survivre a un redemarrage du serveur.
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -74,7 +74,7 @@ const SETTINGS_SCHEMA = {
   timerAlign: ['top', 'center', 'bottom'],
   textScale: { min: 0.5, max: 2 },
   logoMode: ['none', 'timestage', 'custom'],
-  logoPosition: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
+  logoPosition: ['above', 'below', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
   logoSize: { min: 4, max: 60 },
   logoOpacity: { min: 10, max: 100 },
 };
@@ -153,7 +153,62 @@ export function createRoomState(code, name = '') {
     shownQuestionId: null,
     settings: defaultSettings(),
     logo: null, // { data: base64, type: 'image/png', version: n }
+    access: null, // { salt, hash } quand la salle est protegee
   };
+}
+
+// ---------------------------------------------------------------------------
+// Acces a la salle
+//
+// Le code d'acces est un secret de session, pas un mot de passe : il protege
+// une salle le temps d'un evenement. Il est stocke hache et sale — jamais en
+// clair — et la verification est a temps constant. La vraie protection contre
+// la force brute est la limitation de debit cote serveur.
+// ---------------------------------------------------------------------------
+
+const ACCESS_MIN = 4;
+const ACCESS_MAX = 32;
+
+function hashAccess(salt, code) {
+  return createHash('sha256').update(salt + ':' + code).digest('hex');
+}
+
+/** Definit (ou retire, avec une valeur vide) le code d'acces d'une salle. */
+export function setAccessCode(room, code, now = Date.now()) {
+  const clean = String(code == null ? '' : code).trim();
+  if (!clean) {
+    room.access = null;
+    room.updatedAt = now;
+    room.rev += 1;
+    return { ok: true, enabled: false };
+  }
+  if (clean.length < ACCESS_MIN || clean.length > ACCESS_MAX) {
+    return { ok: false, error: `Le code doit faire entre ${ACCESS_MIN} et ${ACCESS_MAX} caracteres.` };
+  }
+  const salt = randomBytes(12).toString('hex');
+  room.access = { salt, hash: hashAccess(salt, clean) };
+  room.updatedAt = now;
+  room.rev += 1;
+  return { ok: true, enabled: true };
+}
+
+/** Vrai si la salle est ouverte, ou si le code fourni correspond. */
+export function checkAccess(room, code) {
+  if (!room?.access) return true;
+  const given = Buffer.from(hashAccess(room.access.salt, String(code == null ? '' : code).trim()), 'hex');
+  const expected = Buffer.from(room.access.hash, 'hex');
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+/**
+ * Renouvelle la cle de regie : les liens de regie deja distribues cessent
+ * aussitot de fonctionner. A utiliser si un QR code de regie a fuite.
+ */
+export function rotateOwnerToken(room, now = Date.now()) {
+  room.ownerToken = makeToken();
+  room.updatedAt = now;
+  room.rev += 1;
+  return room.ownerToken;
 }
 
 const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
@@ -187,11 +242,12 @@ export function clearRoomLogo(room, now = Date.now()) {
   return true;
 }
 
-/** Vue publique : ni jeton de controle, ni binaire du logo. */
+/** Vue publique : ni jeton de controle, ni binaire du logo, ni code d'acces. */
 export function publicState(room) {
-  const { ownerToken, logo, ...rest } = room;
+  const { ownerToken, logo, access, ...rest } = room;
   return {
     ...rest,
+    hasAccessCode: !!access,
     // L'image est servie par une route dediee, versionnee pour le cache.
     logoUrl: logo ? `/api/rooms/${room.code}/logo?v=${logo.version}` : '',
   };
@@ -420,6 +476,12 @@ export function applyCommand(room, name, payload = {}, now = Date.now()) {
       applySettings(room.settings, p.patch || {});
       break;
 
+    case 'room.setAccessCode': {
+      const result = setAccessCode(room, p.code, now);
+      if (!result.ok) return result;
+      break;
+    }
+
     case 'room.reset':
       room.timer = T.defaultTimer();
       room.message = defaultMessage();
@@ -612,6 +674,7 @@ export class RoomStore {
         }
         room.settings = { ...defaultSettings(), ...(room.settings || {}) };
         room.logo = room.logo?.data ? room.logo : null;
+        room.access = room.access?.hash ? room.access : null;
         room.message = { ...defaultMessage(), ...(room.message || {}) };
         room.questions = Array.isArray(room.questions) ? room.questions : [];
         room.presets = Array.isArray(room.presets) && room.presets.length ? room.presets : defaultPresets();

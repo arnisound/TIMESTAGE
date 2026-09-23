@@ -2,7 +2,7 @@
 
 import { $, toast, toggleFullscreen, keepAwake } from './lib/dom.js';
 import { createStage } from './lib/stage.js';
-import { RoomConnection } from './lib/net.js';
+import { RoomConnection, readAccessFromUrl, rememberAccess } from './lib/net.js';
 
 const params = new URLSearchParams(location.search);
 const pathCode = location.pathname.match(/^\/d\/([A-Za-z0-9]{3,8})$/)?.[1];
@@ -15,6 +15,30 @@ const stage = createStage(stageRoot);
 
 if (params.get('compact') === '1') stageRoot.dataset.compact = 'true';
 
+// --- Bandeau d'etat ---------------------------------------------------------
+let hudTimer = null;
+let cursorTimer = null;
+
+/**
+ * Affiche le bandeau d'etat. `ms = 0` le laisse a l'ecran : reserve aux cas ou
+ * la regie doit voir qu'il y a un probleme (connexion perdue, salle absente).
+ * Le reste du temps il s'efface vite : sur une scene, rien ne doit rester
+ * devant le chrono.
+ */
+function showHud(ms = 1200) {
+  document.body.classList.add('show-hud');
+  document.body.classList.remove('idle-cursor');
+  clearTimeout(hudTimer);
+  clearTimeout(cursorTimer);
+  if (ms > 0) hudTimer = setTimeout(() => document.body.classList.remove('show-hud'), ms);
+  cursorTimer = setTimeout(() => document.body.classList.add('idle-cursor'), 3000);
+}
+
+const wake = () => showHud(1600);
+document.addEventListener('mousemove', wake);
+document.addEventListener('touchstart', wake, { passive: true });
+showHud(1600);
+
 if (!code) {
   showJoin();
 } else {
@@ -22,21 +46,30 @@ if (!code) {
 }
 
 let joinWired = false;
-function showJoin() {
+function showJoin({ askAccess = false } = {}) {
   $('#join').classList.remove('hidden');
   stageRoot.classList.add('hidden');
+  $('#access-field').classList.toggle('hidden', !askAccess);
+  if (askAccess) {
+    $('#code').value = code;
+    $('#access').focus();
+  }
   if (joinWired) return;
   joinWired = true;
   $('#join-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const value = $('#code').value.trim().toUpperCase();
-    if (value) location.href = '/d/' + encodeURIComponent(value);
+    if (!value) return;
+    const access = $('#access').value.trim();
+    if (access) rememberAccess(value, access);
+    if (value === code && access) location.reload();
+    else location.href = '/d/' + encodeURIComponent(value);
   });
 }
 
 function start(roomCode) {
   document.title = `Affichage ${roomCode} — TimeStage`;
-  const conn = new RoomConnection({ code: roomCode, role: 'display' });
+  const conn = new RoomConnection({ code: roomCode, role: 'display', access: readAccessFromUrl(roomCode) });
   let state = null;
   let missingAttempts = 0;
 
@@ -64,11 +97,18 @@ function start(roomCode) {
                 ? 'Hors ligne — le chrono continue'
                 : 'Serveur injoignable — nouvelle tentative…'
               : 'Arrete';
-    if (status === 'offline') document.body.classList.add('show-hud');
-    else if (status === 'online') setTimeout(() => document.body.classList.remove('show-hud'), 1500);
+    // En ligne : on confirme brievement puis on libere l'ecran.
+    // Hors ligne : le bandeau reste, c'est une information utile a la regie.
+    showHud(status === 'online' ? 1200 : 0);
   });
 
   conn.addEventListener('remote-error', (event) => {
+    if (event.detail.code === 'access_denied' || event.detail.code === 'rate_limited') {
+      rememberAccess(roomCode, '');
+      toast(event.detail.message || 'Code d\'acces requis.', 'error', 8000);
+      showJoin({ askAccess: true });
+      return;
+    }
     if (event.detail.code !== 'no_room') return;
     missingAttempts += 1;
     if (state) {
@@ -104,19 +144,5 @@ $('#btn-fs').addEventListener('click', () => toggleFullscreen());
 document.addEventListener('keydown', (event) => {
   if (event.key === 'f' || event.key === 'F') toggleFullscreen();
 });
-
-let hudTimer = null;
-let cursorTimer = null;
-const wake = () => {
-  document.body.classList.add('show-hud');
-  document.body.classList.remove('idle-cursor');
-  clearTimeout(hudTimer);
-  clearTimeout(cursorTimer);
-  hudTimer = setTimeout(() => document.body.classList.remove('show-hud'), 2500);
-  cursorTimer = setTimeout(() => document.body.classList.add('idle-cursor'), 4000);
-};
-document.addEventListener('mousemove', wake);
-document.addEventListener('touchstart', wake, { passive: true });
-wake();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});

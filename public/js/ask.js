@@ -1,7 +1,7 @@
 // Page publique : envoi de questions + apercu du temps restant.
 
 import { $, el, clear, toast } from './lib/dom.js';
-import { RoomConnection } from './lib/net.js';
+import { RoomConnection, readAccessFromUrl, rememberAccess } from './lib/net.js';
 import { formatDuration } from '../shared/time.js';
 import { readTimer } from '../shared/timer.js';
 
@@ -16,7 +16,8 @@ const MINE_KEY = 'timestage:mine:' + code;
 const loadMine = () => { try { return JSON.parse(localStorage.getItem(MINE_KEY) || '[]'); } catch { return []; } };
 const saveMine = (list) => { try { localStorage.setItem(MINE_KEY, JSON.stringify(list.slice(-20))); } catch { /* prive */ } };
 
-const conn = new RoomConnection({ code, role: 'viewer' });
+let access = readAccessFromUrl(code);
+const conn = new RoomConnection({ code, role: 'viewer', access });
 let state = null;
 
 conn.addEventListener('state', (event) => {
@@ -40,6 +41,14 @@ conn.addEventListener('status', (event) => {
 });
 
 conn.addEventListener('remote-error', (event) => {
+  if (event.detail.code === 'access_denied' || event.detail.code === 'rate_limited') {
+    rememberAccess(code, '');
+    $('#access-panel').classList.remove('hidden');
+    $('#live-panel').classList.add('hidden');
+    $('#ask-form').classList.add('hidden');
+    if (event.detail.code === 'rate_limited') toast(event.detail.message, 'error', 8000);
+    return;
+  }
   if (event.detail.code === 'no_room') {
     // Redemarrage du serveur : on patiente, la reconnexion est automatique.
     $('#live-title').textContent = 'Salle indisponible';
@@ -80,7 +89,7 @@ $('#ask-form').addEventListener('submit', async (event) => {
     const response = await fetch(`/api/rooms/${code}/questions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text, author: $('#author').value.trim() }),
+      body: JSON.stringify({ text, author: $('#author').value.trim(), access }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'envoi impossible');
@@ -95,6 +104,19 @@ $('#ask-form').addEventListener('submit', async (event) => {
   } finally {
     $('#send').disabled = false;
   }
+});
+
+$('#access-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  access = $('#access').value.trim();
+  rememberAccess(code, access);
+  conn.access = access;
+  conn.closedByUser = false;
+  conn.attempt = 0;
+  conn.connect();
+  $('#access-panel').classList.add('hidden');
+  $('#live-panel').classList.remove('hidden');
+  $('#ask-form').classList.remove('hidden');
 });
 
 $('#text').addEventListener('input', (event) => {

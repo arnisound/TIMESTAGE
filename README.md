@@ -73,6 +73,20 @@ demande simplement de coller ce lien.
 - Presets modifiables (« Merci de conclure », « Parlez plus fort »…).
 - Message libre, quatre styles, clignotement, masquage automatique.
 
+**Sécurité de la session**
+- **Code d'accès** optionnel par salle : sans lui, toute personne connaissant le
+  code de salle peut ouvrir l'affichage et envoyer des questions ; avec lui,
+  l'affichage et le public doivent le saisir. Les QR codes générés par la régie
+  le contiennent déjà, donc scanner suffit.
+- Le code est stocké **haché et salé**, jamais en clair, et comparé à temps
+  constant. Il n'apparaît dans aucun état diffusé — seul un drapeau
+  « salle protégée » circule. Les tentatives sont limitées par IP.
+- Une salle protégée ne révèle plus rien d'elle-même : son nom de session et son
+  nom d'affichage ne sortent plus de l'API tant que le code n'est pas fourni.
+- **Renouvellement de la clé de régie** en un clic : les liens de régie déjà
+  distribués cessent aussitôt de fonctionner et les autres régies connectées
+  sont déconnectées — celle qui déclenche l'opération garde la main.
+
 **Questions du public**
 - Le public scanne un QR code, écrit sa question, et voit le temps restant.
 - La régie relit, valide, projette ou rejette. **Rien n'atteint l'écran sans
@@ -86,8 +100,9 @@ demande simplement de coller ce lien.
   activables séparément.
 - **Personnalisation depuis la régie** : taille du chrono, position (haut,
   centre, bas), taille des textes secondaires, et logo de l'événement — le
-  vôtre, téléversé depuis la régie, ou celui de TimeStage — avec emplacement
-  (quatre coins ou filigrane centré), taille et opacité.
+  vôtre, téléversé depuis la régie, ou celui de TimeStage — placé **au-dessus
+  ou sous le chrono** (sans jamais le recouvrir : le chrono se réduit d'autant),
+  dans l'un des quatre coins, ou en filigrane centré, avec taille et opacité.
   Le chrono ne déborde jamais de l'écran, quel que soit le réglage : un chiffre
   coupé sur une scène ne se rattrape pas.
 - Verrouillage de la mise en veille de l'écran (Wake Lock) et masquage du curseur.
@@ -139,7 +154,7 @@ dérive entre les écrans.
 | --- | --- | --- |
 | `POST` | `/api/rooms` | Crée une salle, renvoie le code et la clé de régie. Un `code` peut être demandé pour reprendre une salle perdue après un redémarrage (409 s'il est déjà pris) |
 | `GET` | `/api/rooms/:code` | Existence et état public d'une salle |
-| `POST` | `/api/rooms/:code/questions` | Envoi d'une question (repli sans WebSocket) |
+| `POST` | `/api/rooms/:code/questions` | Envoi d'une question (repli sans WebSocket ; `access` requis si la salle est protégée) |
 | `PUT` | `/api/rooms/:code/logo` | Téléverse le logo de l'événement (régie uniquement, data URL, 400 ko max) |
 | `GET` | `/api/rooms/:code/logo` | Sert ce logo (URL versionnée, cache immuable) |
 | `DELETE` | `/api/rooms/:code/logo` | Retire le logo (régie uniquement) |
@@ -148,11 +163,13 @@ dérive entre les écrans.
 
 ### WebSocket (`/ws`)
 
-Client → serveur : `hello`, `ping`, `cmd` (régie uniquement), `question`.
-Serveur → client : `welcome`, `state`, `pong`, `ack`, `error`.
+Client → serveur : `hello` (avec `token` pour la régie, `access` pour les
+autres), `ping`, `cmd` (régie uniquement), `question`.
+Serveur → client : `welcome`, `state`, `pong`, `ack`, `key`, `error`.
 
 Les commandes portent des noms explicites : `timer.start`, `timer.setFormat`,
-`session.load`, `message.send`, `question.show`, `settings.update`…
+`session.load`, `message.send`, `question.show`, `settings.update`,
+`room.setAccessCode`, `room.rotateKey`…
 
 ## Déploiement
 

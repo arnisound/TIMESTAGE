@@ -7,8 +7,10 @@
 <meta name="description" content="Envoyez votre question a la regie. Elle sera lue et validee avant affichage.">
 <meta name="theme-color" content="#0b0e14">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/favicon-32.png?v=2" type="image/png" sizes="32x32">
+<link rel="icon" href="/icons/favicon-16.png?v=2" type="image/png" sizes="16x16">
+<link rel="icon" href="/icons/icon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2">
 <link rel="stylesheet" href="/css/base.css">
 <style>
   .wrap { max-width: 34rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
@@ -26,6 +28,17 @@
     <span class="row tight"><img src="/icons/icon.svg" alt="" width="22" height="22"><strong id="room-name">TimeStage</strong></span>
     <span class="code-badge" id="room-code">-----</span>
   </header>
+
+  <section class="panel hidden" id="access-panel">
+    <div class="panel-head"><h2 class="panel-title">Salle protegee</h2></div>
+    <form id="access-form" class="stack">
+      <div class="field">
+        <label for="access">Code d'acces</label>
+        <input id="access" type="text" maxlength="32" autocomplete="off" placeholder="Affiche en salle" required>
+      </div>
+      <button class="btn primary block" type="submit">Entrer</button>
+    </form>
+  </section>
 
   <section class="panel" id="live-panel">
     <div class="panel-head"><h2 class="panel-title" id="live-title">En cours</h2><span class="chip" id="status">…</span></div>

@@ -7,8 +7,10 @@
 <meta name="description" content="Chronometre de scene utilisable sans connexion, directement dans le navigateur.">
 <meta name="theme-color" content="#0b0e14">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/favicon-32.png?v=2" type="image/png" sizes="32x32">
+<link rel="icon" href="/icons/favicon-16.png?v=2" type="image/png" sizes="16x16">
+<link rel="icon" href="/icons/icon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/stage.css">
 <link rel="stylesheet" href="/css/control.css">
@@ -210,6 +212,8 @@
           <div class="tune-row">
             <label for="logo-position">Emplacement du logo</label>
             <select id="logo-position">
+              <option value="above">Au-dessus du chrono</option>
+              <option value="below">Sous le chrono</option>
               <option value="top-left">En haut a gauche</option>
               <option value="top-right">En haut a droite</option>
               <option value="bottom-left">En bas a gauche</option>

@@ -18,6 +18,8 @@ import {
   cleanText,
   setRoomLogo,
   clearRoomLogo,
+  checkAccess,
+  rotateOwnerToken,
 } from './rooms.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -105,8 +107,11 @@ app.post('/api/rooms', (req, res) => {
 app.get('/api/rooms/:code', (req, res) => {
   const room = store.get(req.params.code);
   if (!room) return res.status(404).json({ error: 'Salle introuvable.' });
+  // Salle protegee : on confirme seulement qu'elle existe et qu'il faut un code.
+  if (room.access) return res.json({ code: room.code, protected: true });
   res.json({
     code: room.code,
+    protected: false,
     name: room.session.name,
     questionsOpen: room.settings.questionsOpen,
     displayName: room.settings.displayName,
@@ -117,6 +122,10 @@ app.post('/api/rooms/:code/questions', (req, res) => {
   const room = store.get(req.params.code);
   if (!room) return res.status(404).json({ error: 'Salle introuvable.' });
   const ip = clientIp(req);
+  if (!checkAccess(room, req.body?.access)) {
+    const attempts = rateLimit(`access:${ip}`, { limit: 10, windowMs: 10 * 60_000 });
+    return res.status(attempts.ok ? 403 : 429).json({ error: 'Code d acces requis.', code: 'access_denied' });
+  }
   const burst = rateLimit(`q:${room.code}:${ip}`, { limit: 5, windowMs: 60_000 });
   if (!burst.ok) {
     return res.status(429).json({ error: 'Patientez un instant avant la prochaine question.' });
@@ -244,6 +253,7 @@ wss.on('connection', (ws, req) => {
   ws.isAlive = true;
   ws.role = 'viewer';
   ws.roomCode = null;
+  ws.authorized = false;
   ws.ip = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
   ws.on('pong', () => {
     ws.isAlive = true;
@@ -279,6 +289,17 @@ function handleMessage(ws, msg) {
       if (wantsControl && !isOwner) {
         return send(ws, { t: 'error', code: 'forbidden', message: 'Jeton de controle invalide.' });
       }
+      // La regie entre avec sa cle ; tous les autres avec le code d'acces.
+      if (!isOwner && !checkAccess(room, msg.access)) {
+        const attempts = rateLimit(`access:${ws.ip}`, { limit: 10, windowMs: 10 * 60_000 });
+        return send(ws, {
+          t: 'error',
+          code: attempts.ok ? 'access_denied' : 'rate_limited',
+          message: attempts.ok ? 'Code d acces requis.' : 'Trop de tentatives, patientez.',
+        });
+      }
+      ws.ownerToken = isOwner ? room.ownerToken : null;
+      ws.authorized = true;
       if (ws.roomCode && ws.roomCode !== room.code) leave(ws.roomCode, ws);
       ws.roomCode = room.code;
       ws.role = wantsControl ? 'control' : msg.role === 'display' ? 'display' : 'viewer';
@@ -297,6 +318,23 @@ function handleMessage(ws, msg) {
       if (ws.role !== 'control') {
         return send(ws, { t: 'error', code: 'forbidden', message: 'Commande reservee a la regie.' });
       }
+
+      // Le renouvellement de cle se traite ici, et non dans applyCommand : il
+      // faut savoir quelle regie l'a demande pour ne pas la deconnecter avec
+      // les autres.
+      if (msg.name === 'room.rotateKey') {
+        const ownerToken = rotateOwnerToken(room, now);
+        ws.ownerToken = ownerToken;
+        send(ws, { t: 'key', ownerToken });
+        for (const other of roomSockets.get(room.code) || []) {
+          if (other === ws || other.role !== 'control') continue;
+          send(other, { t: 'error', code: 'forbidden', message: 'Cle de regie renouvelee.' });
+          other.close();
+        }
+        store.scheduleSave();
+        broadcast(room);
+        return;
+      }
       const result = applyCommand(room, msg.name, msg.payload, now);
       if (!result.ok) {
         return send(ws, { t: 'error', code: 'cmd_failed', message: result.error, cmd: msg.name });
@@ -310,6 +348,9 @@ function handleMessage(ws, msg) {
     case 'question': {
       const room = store.get(ws.roomCode);
       if (!room) return send(ws, { t: 'error', code: 'no_room', message: 'Salle introuvable.' });
+      if (!ws.authorized) {
+        return send(ws, { t: 'error', code: 'access_denied', message: 'Code d acces requis.' });
+      }
       const limit = rateLimit(`qws:${room.code}:${ws.ip}`, { limit: 5, windowMs: 60_000 });
       if (!limit.ok) {
         return send(ws, { t: 'error', code: 'rate_limited', message: 'Patientez avant la prochaine question.' });

@@ -7,8 +7,10 @@
 <meta name="description" content="Fenetre d'affichage du chronometre de scene TimeStage.">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/favicon-32.png?v=2" type="image/png" sizes="32x32">
+<link rel="icon" href="/icons/favicon-16.png?v=2" type="image/png" sizes="16x16">
+<link rel="icon" href="/icons/icon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/stage.css">
 <style>
@@ -42,6 +44,10 @@
         <label for="code">Code de salle</label>
         <input id="code" name="code" type="text" maxlength="8" autocomplete="off" autocapitalize="characters"
                spellcheck="false" placeholder="ABCDE" class="mono" required>
+      </div>
+      <div class="field hidden" id="access-field" style="margin-top:.6rem">
+        <label for="access">Code d'acces de la salle</label>
+        <input id="access" name="access" type="text" maxlength="32" autocomplete="off" placeholder="Fourni par la regie">
       </div>
       <div class="row" style="margin-top:.8rem">
         <button class="btn primary grow" type="submit">Afficher</button>
