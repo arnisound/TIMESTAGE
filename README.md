@@ -1,13 +1,13 @@
 # TimeStage
 
-**© 2026 Arnisound Tools — Théo Arnissolle. Tous droits réservés.**
+**© 2026 Arnisound Tools (Théo Arnissolle). Tous droits réservés.**
 Logiciel propriétaire : le code est visible, il n'est pas libre de droits.
 Voir [LICENSE](LICENSE) et [Licence et propriété](#licence-et-propriété).
 
 Chronomètre de scène pour conférences, cultes, meetups, remises de prix : une
 **fenêtre de régie**, une **fenêtre d'affichage**, le partage par **QR code**,
 des **messages à l'orateur**, les **questions du public modérées**, un
-**déroulé de session** — et un **mode hors ligne** qui fonctionne sans aucun
+**déroulé de session**, et un **mode hors ligne** qui fonctionne sans aucun
 réseau, directement dans le navigateur.
 
 Aucun compte, aucune base de données, aucune donnée personnelle : une salle est
@@ -15,10 +15,10 @@ un code à 5 caractères qui vit en mémoire sur le serveur.
 
 > **GitHub Pages ne peut pas héberger l'application complète** : c'est un
 > hébergement de fichiers, il n'exécute pas Node, donc ni salles ni WebSocket.
-> Le workflow fourni y publie la **version statique** — le chrono hors ligne,
+> Le workflow fourni y publie la **version statique** : le chrono hors ligne,
 > complet et utilisable seul. Pour la régie et l'affichage sur deux appareils,
 > les QR codes et les questions du public, il faut faire tourner le serveur
-> Node quelque part — [Render](#render--serveur-complet-gratuit) le fait
+> Node quelque part. [Render](#render-serveur-complet-gratuit) le fait
 > gratuitement en trois clics. Tout est expliqué dans [Déploiement](#déploiement).
 
 ## Démarrage
@@ -52,7 +52,7 @@ Variables d'environnement :
 
 La régie est protégée par une **clé** générée à la création de la salle. Elle est
 conservée dans le navigateur qui a créé la session et incluse dans le QR code
-« Régie » — ce QR code permet donc de prendre la main depuis une tablette, mais
+« Régie ». Ce QR code permet donc de prendre la main depuis une tablette, mais
 ne doit être montré qu'à l'équipe technique. Sur un nouvel appareil, la régie
 demande simplement de coller ce lien.
 
@@ -108,13 +108,13 @@ demande simplement de coller ce lien.
   l'affichage et le public doivent le saisir. Les QR codes générés par la régie
   le contiennent déjà, donc scanner suffit.
 - Le code est stocké **haché et salé**, jamais en clair, et comparé à temps
-  constant. Il n'apparaît dans aucun état diffusé — seul un drapeau
+  constant. Il n'apparaît dans aucun état diffusé : seul un drapeau
   « salle protégée » circule. Les tentatives sont limitées par IP.
 - Une salle protégée ne révèle plus rien d'elle-même : son nom de session et son
   nom d'affichage ne sortent plus de l'API tant que le code n'est pas fourni.
 - **Renouvellement de la clé de régie** en un clic : les liens de régie déjà
   distribués cessent aussitôt de fonctionner et les autres régies connectées
-  sont déconnectées — celle qui déclenche l'opération garde la main.
+  sont déconnectées, celle qui déclenche l'opération gardant la main.
 
 **Questions du public**
 - Le public scanne un QR code, écrit sa question, et voit le temps restant.
@@ -130,8 +130,8 @@ demande simplement de coller ce lien.
 - **Couleurs du chrono** au choix : en cours, seuil ambre, seuil rouge,
   dépassement et textes. Laisser une couleur vide rend la main au thème.
 - **Personnalisation depuis la régie** : taille du chrono, position (haut,
-  centre, bas), taille des textes secondaires, et logo de l'événement — le
-  vôtre, téléversé depuis la régie, ou celui de TimeStage — placé **au-dessus
+  centre, bas), taille des textes secondaires, et logo de l'événement : le
+  vôtre, téléversé depuis la régie, ou celui de TimeStage, placé **au-dessus
   ou sous le chrono** (sans jamais le recouvrir : le chrono se réduit d'autant),
   dans l'un des quatre coins, ou en filigrane centré, avec taille et opacité.
   Le chrono ne déborde jamais de l'écran, quel que soit le réglage : un chiffre
@@ -142,11 +142,11 @@ demande simplement de coller ce lien.
 **Mode hors ligne**
 - `/offline` fonctionne sans aucune connexion une fois la page visitée : le
   service worker met l'application en cache.
-- Chrono complet, formats, messages, déroulé local — le tout dans le navigateur.
+- Chrono complet, formats, messages, déroulé local, le tout dans le navigateur.
 - « Ouvrir l'affichage » lance une seconde fenêtre (second écran, vidéoprojecteur)
   synchronisée par `BroadcastChannel`, toujours sans réseau.
 
-La fenêtre de régie est organisée en sections repliables — chronomètre toujours
+La fenêtre de régie est organisée en sections repliables : chronomètre toujours
 visible, puis mode & format, déroulé, affichage, message, sécurité et questions.
 L'état plié ou déplié de chacune est retenu d'une session à l'autre.
 
@@ -212,7 +212,7 @@ TimeStage a deux moitiés : une partie **statique** (le chrono lui-même, qui
 tourne dans le navigateur) et une partie **serveur** (les salles, la
 synchronisation WebSocket, les QR codes, les questions du public).
 
-### GitHub Pages — version statique, sans serveur
+### GitHub Pages : version statique, sans serveur
 
 GitHub Pages ne sert que des fichiers : il ne peut pas exécuter Node, donc ni
 salles, ni WebSocket. En revanche il héberge très bien le **chrono hors ligne**,
@@ -247,7 +247,7 @@ Si vous hébergez aussi le serveur complet, définissez la variable de dépôt
 `TIMESTAGE_SERVER_URL` (Settings → Secrets and variables → Actions → Variables) :
 la page statique affichera un lien direct vers votre instance.
 
-### Render — serveur complet, gratuit
+### Render : serveur complet, gratuit
 
 Render exécute le serveur Node tel quel : **toutes les fonctions** marchent, y
 compris la régie et l'affichage sur deux appareils, les QR codes et les
@@ -271,12 +271,12 @@ Variables) : la page GitHub Pages affichera un lien vers votre instance.
 | Mise en veille après 15 min sans trafic | La première ouverture attend ~1 min | La page d'accueil réveille le serveur dès son ouverture et affiche « Le serveur se réveille… » au lieu de figer |
 | Le trafic WebSocket compte comme activité | Pas de mise en veille **pendant** un événement | Chaque écran envoie un battement toutes les 10 s |
 | Redémarrage = salles perdues (mémoire vive) | Le code de salle disparaîtrait | La régie propose de **recréer la salle avec le même code** et rejoue le déroulé, les réglages et les presets sauvegardés localement. Les QR codes déjà distribués restent valables et les écrans se reconnectent seuls |
-| Pendant la coupure | — | Les affichages **continuent de compter** sur l'horloge estimée ; rien ne se fige à l'écran |
+| Pendant la coupure | (rien à faire) | Les affichages **continuent de compter** sur l'horloge estimée ; rien ne se fige à l'écran |
 
 En pratique : ouvrez l'application cinq minutes avant de commencer, le temps
 que le serveur soit chaud, et tout se passe sans accroc. Pour éviter toute
 attente, un service de ping gratuit (UptimeRobot, cron-job.org) qui appelle
-`/api/health` toutes les dix minutes garde le service éveillé — sachant qu'un
+`/api/health` toutes les dix minutes garde le service éveillé, sachant qu'un
 service actif en permanence consomme environ 730 des 750 heures gratuites
 mensuelles.
 
@@ -321,9 +321,9 @@ Le logo source est dans `brand/timestage-logo.svg`. Son texte utilise la police
 Arial Rounded MT Bold : pour éviter toute dépendance à une police installée,
 l'application utilise deux dérivés générés depuis cette source :
 
-- `public/icons/icon.svg` — la marque **sans texte** (badge, anneau doré, onde,
+- `public/icons/icon.svg` : la marque **sans texte** (badge, onde, aiguille,
   aiguilles) : favicon et pastille dans les barres de titre, lisible jusqu'à 32 px ;
-- `public/icons/logo.png` et les icônes 192/512 — le logo complet en matriciel,
+- `public/icons/logo.png` et les icônes 192/512 : le logo complet en matriciel,
   fidèle au fichier d'origine, pour l'accueil et l'installation en application.
 
 Pour les régénérer après une modification du logo, voir les dérivés listés
@@ -350,7 +350,7 @@ Les conditions complètes figurent dans [LICENSE](LICENSE), et les mentions
 légales du service en ligne sont servies sur la route `/legal`
 ([source](public/legal.html)).
 
-Pour une licence commerciale — intégration, hébergement, marque blanche —
+Pour une licence commerciale (intégration, hébergement, marque blanche),
 écrivez à <contact@arnisoundtools.com>.
 
 ### Avant une mise en ligne publique

@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -12,7 +12,7 @@
 // ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
 // URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v7';
+const VERSION = 'timestage-v8';
 const BASE = new URL('./', self.location).pathname;
 const at = (path) => BASE + path;
 
@@ -42,7 +42,7 @@ const SHELL = [
   'shared/timer.js',
   'shared/effects.js',
   'icons/icon.svg',
-  'icons/icon-maskable.svg',
+  'icons/icon-maskable.png',
   'icons/logo.png',
   'icons/favicon-32.png',
   'icons/favicon-16.png',

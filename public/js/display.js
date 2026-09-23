@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -36,7 +36,7 @@ if (keyMode) {
   // « show » ajoute au chrono les elements demandes : title, sub, progress, message.
   stageRoot.dataset.show = (params.get('show') || '').toLowerCase().split(/[,\s]+/).filter(Boolean).join(' ');
   if (params.get('shadow') === '1') stageRoot.dataset.shadow = 'true';
-  document.title = `Chrono video ${code} — TimeStage`;
+  document.title = `Chrono video ${code} | TimeStage`;
 }
 
 // --- Bandeau d'etat ---------------------------------------------------------
@@ -92,7 +92,7 @@ function showJoin({ askAccess = false } = {}) {
 }
 
 function start(roomCode) {
-  document.title = `Affichage ${roomCode} — TimeStage`;
+  document.title = `Affichage ${roomCode} | TimeStage`;
   const conn = new RoomConnection({ code: roomCode, role: 'display', access: readAccessFromUrl(roomCode) });
   let state = null;
   let missingAttempts = 0;
@@ -101,7 +101,7 @@ function start(roomCode) {
     state = event.detail;
     missingAttempts = 0;
     stageRoot.dataset.theme = state.settings?.theme || 'dark';
-    document.title = `${state.settings?.displayName || state.session?.name || 'Affichage'} ${roomCode} — TimeStage`;
+    document.title = `${state.settings?.displayName || state.session?.name || 'Affichage'} ${roomCode} | TimeStage`;
   });
 
   conn.addEventListener('status', (event) => {
@@ -113,13 +113,13 @@ function start(roomCode) {
       status === 'online'
         ? 'En ligne'
         : conn.missingRoom
-          ? 'Salle indisponible — nouvelle tentative…'
+          ? 'Salle indisponible, nouvelle tentative…'
           : status === 'connecting'
             ? 'Connexion…'
             : status === 'offline'
               ? state
-                ? 'Hors ligne — le chrono continue'
-                : 'Serveur injoignable — nouvelle tentative…'
+                ? 'Hors ligne, le chrono continue'
+                : 'Serveur injoignable, nouvelle tentative…'
               : 'Arrete';
     // En ligne : on confirme brievement puis on libere l'ecran.
     // Hors ligne : le bandeau reste, c'est une information utile a la regie.

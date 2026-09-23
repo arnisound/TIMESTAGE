@@ -19,7 +19,7 @@
     "qrcode": "^1.5.4",
     "ws": "^8.18.0"
   },
-  "author": "Arnisound Tools — Theo Arnissolle <contact@arnisoundtools.com>",
+  "author": "Arnisound Tools (Theo Arnissolle) <contact@arnisoundtools.com>",
   "license": "UNLICENSED",
   "homepage": "https://github.com/arnisound/TIMESTAGE",
   "repository": {

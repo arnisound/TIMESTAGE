@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -37,7 +37,7 @@ const isDisplayWindow = new URLSearchParams(location.search).get('view') === 'di
 if (isDisplayWindow) {
   document.body.classList.add('offline-display');
   const keyMode = new URLSearchParams(location.search).get('key') === '1';
-  document.title = keyMode ? 'Chrono video — TimeStage' : 'Affichage hors ligne — TimeStage';
+  document.title = keyMode ? 'Chrono video | TimeStage' : 'Affichage hors ligne | TimeStage';
   const stage = createStage($('#full-stage'));
   if (keyMode) {
     document.body.classList.add('key-mode');

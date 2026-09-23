@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -50,7 +50,7 @@ conn.addEventListener('status', (event) => {
     status === 'online'
       ? 'Connecte'
       : conn.missingRoom
-        ? 'Salle perdue — recreer'
+        ? 'Salle perdue, recreer'
         : status === 'connecting'
           ? 'Connexion…'
           : status === 'offline'
@@ -242,7 +242,7 @@ function renderPresets() {
         class: 'btn preset',
         type: 'button',
         dataset: { style: preset.style },
-        title: 'Envoyer — clic droit pour supprimer',
+        title: 'Envoyer (clic droit pour supprimer)',
         text: preset.text,
         onclick: () => cmd('message.send', { text: preset.text, style: preset.style }),
         oncontextmenu: (event) => {

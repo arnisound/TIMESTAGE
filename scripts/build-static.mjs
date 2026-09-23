@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -60,7 +60,7 @@ html = html.replace(/(href|src)="\/(css|js|icons|manifest)/g, '$1="$2');
 html = html.replace('href="/legal"', 'href="legal.html"');
 
 html = html
-  .replace('<title>Chrono hors ligne — TimeStage</title>', '<title>TimeStage — chronometre de scene</title>')
+  .replace('<title>Chrono hors ligne | TimeStage</title>', '<title>TimeStage, chronometre de scene</title>')
   .replace(
     '<a class="btn sm ghost" href="/">Mode connecte</a>',
     SERVER_URL

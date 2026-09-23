@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -189,8 +189,8 @@ export function createRoomState(code, name = '') {
 // Acces a la salle
 //
 // Le code d'acces est un secret de session, pas un mot de passe : il protege
-// une salle le temps d'un evenement. Il est stocke hache et sale — jamais en
-// clair — et la verification est a temps constant. La vraie protection contre
+// une salle le temps d'un evenement. Il est stocke hache et sale, jamais en
+// clair, et la verification est a temps constant. La vraie protection contre
 // la force brute est la limitation de debit cote serveur.
 // ---------------------------------------------------------------------------
 

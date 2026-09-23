@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -137,7 +137,7 @@ export function createStage(root) {
     let sub = '';
     if (view.mode === 'countdown' && timer.durationMs > 0) {
       sub = 'sur ' + formatDuration(timer.durationMs, { h: 'auto', m: 'on', s: 'on', ms: 0 });
-      if (view.negative) sub = 'Depassement — ' + sub;
+      if (view.negative) sub = 'Depassement, ' + sub;
     } else if (view.mode === 'countup' && timer.durationMs > 0) {
       sub = 'objectif ' + formatDuration(timer.durationMs, { h: 'auto', m: 'on', s: 'on', ms: 0 });
     }
@@ -178,7 +178,7 @@ export function createStage(root) {
       questionNode.append(
         el('div', { class: 'q-label', text: 'Question du public' }),
         el('div', { class: 'q-text', text: question.text }),
-        question.author ? el('div', { class: 'q-author', text: '— ' + question.author }) : null
+        question.author ? el('div', { class: 'q-author', text: 'par ' + question.author }) : null
       );
     }
 

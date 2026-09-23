@@ -1,5 +1,5 @@
 {
-  "name": "TimeStage — chronometre de scene",
+  "name": "TimeStage, chronometre de scene",
   "short_name": "TimeStage",
   "description": "Chronometre de scene avec regie, affichage, QR codes, messages, questions du public et mode hors ligne.",
   "start_url": "/",
@@ -10,12 +10,6 @@
   "theme_color": "#0b0e14",
   "lang": "fr",
   "icons": [
-    {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
@@ -29,9 +23,9 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],

@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -71,7 +71,7 @@ $('#create-form').addEventListener('submit', async (event) => {
   const slow = setTimeout(() => {
     if (serverAwake) return;
     hint.classList.remove('hidden');
-    hint.textContent = 'Le serveur se reveille — cela peut prendre jusqu\'a une minute la premiere fois.';
+    hint.textContent = 'Le serveur se reveille, cela peut prendre jusqu\'a une minute la premiere fois.';
   }, 2500);
 
   try {

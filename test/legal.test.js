@@ -1,6 +1,6 @@
 /*!
- * TimeStage — chronometre de scene
- * © 2026 Arnisound Tools — Theo Arnissolle. Tous droits reserves.
+ * TimeStage, chronometre de scene
+ * © 2026 Arnisound Tools (Theo Arnissolle). Tous droits reserves.
  * Logiciel proprietaire : toute reproduction, modification, distribution ou
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
@@ -93,5 +93,25 @@ test('les pages publiques ne renvoient pas vers le depot de code', () => {
   // Le logiciel est proprietaire : l'interface n'invite pas a recuperer le code.
   for (const page of ['public/index.html', 'public/ask.html', 'public/offline.html', 'public/control.html']) {
     assert.equal(/github\.com/i.test(read(page)), false, 'lien vers le depot dans ' + page);
+  }
+});
+
+test('aucun tiret cadratin dans les textes du projet', () => {
+  // Choix de redaction : la ponctuation francaise du projet se passe de « — »
+  // et de « – ». Ce test les attrape s'ils reviennent.
+  const fichiers = [
+    'LICENSE', 'README.md', 'package.json',
+    'public/index.html', 'public/legal.html', 'public/control.html',
+    'public/ask.html', 'public/offline.html', 'public/display.html',
+    'public/js/control.js', 'public/js/display.js', 'public/js/ask.js',
+    'public/js/index.js', 'public/js/offline.js',
+    'public/js/lib/stage.js', 'public/js/lib/net.js', 'public/js/lib/dom.js',
+    'server/index.js', 'server/rooms.js',
+    'shared/time.js', 'shared/timer.js', 'shared/effects.js',
+  ];
+  for (const fichier of fichiers) {
+    const contenu = read(fichier);
+    const ligne = contenu.split('\n').findIndex((l) => /[\u2013\u2014]/.test(l));
+    assert.equal(ligne, -1, `tiret cadratin dans ${fichier} ligne ${ligne + 1}`);
   }
 });
