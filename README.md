@@ -327,11 +327,15 @@ npm run cf:deploy           # assemble les fichiers puis publie
 
 #### Domaine personnalise
 
-Dans le tableau de bord Cloudflare, ouvrir **Workers & Pages → timestage →
-Settings → Domains & Routes → Add → Custom domain**, et saisir
-`timestage.arnisoundtools.com`. Le domaine etant deja sur Cloudflare,
-l'enregistrement DNS et le certificat sont crees automatiquement : rien a
-ajouter a la main, et le site a la racine du domaine n'est pas touche.
+`timestage.arnisoundtools.com` est declare dans `wrangler.jsonc` : le
+deploiement cree l'enregistrement DNS et le certificat, sans rien ajouter a la
+main, et le site a la racine du domaine n'est pas touche. Le domaine doit etre
+sur le compte Cloudflare qui heberge le Worker.
+
+Pour publier ailleurs, changer le champ `routes`. Le champ `workers_dev`
+garde ouverte l'adresse `timestage.<compte>.workers.dev`, pratique pour
+verifier une mise en ligne avant de basculer le domaine ; le passer a `false`
+pour n'exposer que le domaine.
 
 Le WebSocket passe sans reglage particulier. Cloudflare ferme les connexions
 inactives au bout d'une centaine de secondes ; TimeStage envoie un battement
