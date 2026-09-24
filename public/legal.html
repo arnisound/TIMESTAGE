@@ -53,17 +53,22 @@
     <dd class="mono">108 233 578 00013</dd>
     <dt>Contact</dt>
     <dd><a href="mailto:contact@arnisoundtools.com">contact@arnisoundtools.com</a></dd>
+    <dt>Site</dt>
+    <dd><a href="https://arnisoundtools.com" rel="noopener">arnisoundtools.com</a></dd>
     <dt>Directeur de la publication</dt>
     <dd>Theo Arnissolle</dd>
   </dl>
 
   <h2>Hebergement</h2>
+  <p>
+    Le service est heberge par <strong>Render Services, Inc.</strong>, qui exploite les serveurs
+    sur lesquels TimeStage est deploye.
+  </p>
   <p class="todo" id="hosting-note">
-    <strong>A completer avant mise en ligne publique.</strong> La loi impose d'indiquer le nom,
-    la denomination sociale, l'adresse et le telephone de l'hebergeur. Renseignez ici les
-    coordonnees exactes de votre hebergeur (par exemple Render Services, Inc. pour le serveur,
-    GitHub, Inc. pour les pages statiques), telles qu'elles figurent dans ses propres
-    conditions.
+    <strong>A completer avant mise en ligne publique.</strong> La loi impose d'indiquer, outre le
+    nom de l'hebergeur, son adresse et son numero de telephone. Reportez ici les coordonnees
+    exactes telles qu'elles figurent dans les conditions de l'hebergeur, et remplacez ce bloc
+    si le service change d'hebergement.
   </p>
 
   <h2>Propriete intellectuelle</h2>
@@ -105,6 +110,13 @@
       la salle.
     </li>
     <li>
+      <strong>Les votes d'un sondage</strong> : seule la reponse choisie est conservee, rattachee
+      a un jeton aleatoire tire par le navigateur du votant. Ce jeton n'identifie personne : il
+      sert uniquement a ce qu'un appareil ne compte qu'une voix et puisse changer d'avis tant que
+      le vote est ouvert. Ni nom, ni adresse IP ne sont attaches a un vote, et les votes suivent
+      le meme sort que la salle.
+    </li>
+    <li>
       <strong>L'adresse IP</strong> : traitee de maniere transitoire, en memoire, dans le seul
       but de limiter les abus (nombre de questions et de tentatives d'acces). Elle n'est ni
       enregistree durablement, ni exploitee a d'autres fins.
@@ -113,8 +125,8 @@
 
   <h3>Ce qui reste sur votre appareil</h3>
   <p>
-    La cle de regie, le code d'acces d'une salle, la sauvegarde locale du deroule et les
-    reglages du chronometre hors ligne sont stockes dans le navigateur
+    La cle de regie, le code d'acces d'une salle, le jeton de votant, la sauvegarde locale du
+    deroule et les reglages du chronometre hors ligne sont stockes dans le navigateur
     (<span class="mono">localStorage</span>). Ces informations ne quittent pas l'appareil et
     disparaissent lorsque vous videz les donnees de navigation.
   </p>

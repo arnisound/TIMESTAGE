@@ -60,6 +60,17 @@ test('les mentions legales portent les informations exigees', () => {
   // La description des donnees doit rester fidele au fonctionnement reel.
   assert.match(legal, /48 heures/, 'la duree de conservation est annoncee');
   assert.match(legal, /ne depose aucun cookie/i);
+  assert.match(legal, /arnisoundtools\.com/, "l'adresse du service est annoncee");
+  // Le sondage ajoute un traitement : il doit figurer dans la description.
+  assert.match(legal, /sondage/i, 'les votes sont decrits');
+});
+
+test("l accueil ne repete pas le lien des mentions legales", () => {
+  const home = read('public/index.html');
+  const liens = home.match(/href="\/legal"/g) || [];
+  assert.equal(liens.length, 1, 'un seul lien, en pied de page');
+  const entete = home.slice(home.indexOf('<header'), home.indexOf('</header>'));
+  assert.equal(/href="\/legal"/.test(entete), false, "pas de lien legal en entete");
 });
 
 test('les pages publiques mènent aux mentions legales', () => {

@@ -6,9 +6,9 @@ Voir [LICENSE](LICENSE) et [Licence et propriété](#licence-et-propriété).
 
 Chronomètre de scène pour conférences, cultes, meetups, remises de prix : une
 **fenêtre de régie**, une **fenêtre d'affichage**, le partage par **QR code**,
-des **messages à l'orateur**, les **questions du public modérées**, un
-**déroulé de session**, et un **mode hors ligne** qui fonctionne sans aucun
-réseau, directement dans le navigateur.
+des **messages à l'orateur**, les **questions du public modérées**, les
+**sondages en direct**, un **déroulé de session**, et un **mode hors ligne** qui
+fonctionne sans aucun réseau, directement dans le navigateur.
 
 Aucun compte, aucune base de données, aucune donnée personnelle : une salle est
 un code à 5 caractères qui vit en mémoire sur le serveur.
@@ -17,7 +17,7 @@ un code à 5 caractères qui vit en mémoire sur le serveur.
 > hébergement de fichiers, il n'exécute pas Node, donc ni salles ni WebSocket.
 > Le workflow fourni y publie la **version statique** : le chrono hors ligne,
 > complet et utilisable seul. Pour la régie et l'affichage sur deux appareils,
-> les QR codes et les questions du public, il faut faire tourner le serveur
+> les QR codes, les questions et les sondages du public, il faut faire tourner le serveur
 > Node quelque part. [Render](#render-serveur-complet-gratuit) le fait
 > gratuitement en trois clics. Tout est expliqué dans [Déploiement](#déploiement).
 
@@ -47,7 +47,7 @@ Variables d'environnement :
 | Régie | `/c/CODE` | La technique : pilote tout |
 | Affichage | `/d/CODE` | L'écran de scène ou le retour orateur |
 | Chrono vidéo | `/k/CODE` | Le chrono seul sur fond transparent, pour un mélangeur vidéo |
-| Questions | `/q/CODE` | Le public, depuis son téléphone |
+| Questions et sondages | `/q/CODE` | Le public, depuis son téléphone |
 | Hors ligne | `/offline` | Chrono local, sans serveur |
 
 La régie est protégée par une **clé** générée à la création de la salle. Elle est
@@ -122,6 +122,19 @@ demande simplement de coller ce lien.
   validation** : les questions en attente ne sont jamais envoyées à l'affichage.
 - Limitation de débit et filtrage des doublons côté serveur.
 
+**Sondages du public**
+- La régie pose une question et jusqu'à six réponses ; le public vote depuis le
+  même QR code que les questions, sans compte ni installation.
+- **Les chiffres restent à la régie tant qu'elle ne les ouvre pas** : le public
+  et l'écran ne reçoivent que des compteurs à zéro, pour que l'annonce des
+  résultats reste une décision et n'influence pas ceux qui votent encore.
+- Un appareil ne compte qu'une voix, et peut changer d'avis tant que le vote est
+  ouvert. Le repère est un jeton aléatoire tiré par le navigateur : il
+  n'identifie personne et ne quitte jamais l'appareil.
+- Vote ouvert ou clos, résultats publics ou non, sondage à l'écran ou non : les
+  trois réglages sont indépendants. La fenêtre vidéo l'affiche sur demande avec
+  `?show=poll`.
+
 **Affichage**
 - Plein écran, chiffres dimensionnés automatiquement, thèmes Or / sombre /
   clair / contraste maximal, écran noir instantané.
@@ -147,7 +160,8 @@ demande simplement de coller ce lien.
   synchronisée par `BroadcastChannel`, toujours sans réseau.
 
 La fenêtre de régie est organisée en sections repliables : chronomètre toujours
-visible, puis mode & format, déroulé, affichage, message, sécurité et questions.
+visible, puis mode & format, déroulé, affichage, message, animations, sécurité,
+sondage et questions.
 L'état plié ou déplié de chacune est retenu d'une session à l'autre.
 
 ## Raccourcis clavier (régie)
@@ -190,6 +204,7 @@ dérive entre les écrans.
 | `POST` | `/api/rooms` | Crée une salle, renvoie le code et la clé de régie. Un `code` peut être demandé pour reprendre une salle perdue après un redémarrage (409 s'il est déjà pris) |
 | `GET` | `/api/rooms/:code` | Existence et état public d'une salle |
 | `POST` | `/api/rooms/:code/questions` | Envoi d'une question (repli sans WebSocket ; `access` requis si la salle est protégée) |
+| `POST` | `/api/rooms/:code/vote` | Vote sur le sondage en cours (repli sans WebSocket ; `access` requis si la salle est protégée) |
 | `PUT` | `/api/rooms/:code/logo` | Téléverse le logo de l'événement (régie uniquement, data URL, 400 ko max) |
 | `GET` | `/api/rooms/:code/logo` | Sert ce logo (URL versionnée, cache immuable) |
 | `DELETE` | `/api/rooms/:code/logo` | Retire le logo (régie uniquement) |
@@ -199,18 +214,21 @@ dérive entre les écrans.
 ### WebSocket (`/ws`)
 
 Client → serveur : `hello` (avec `token` pour la régie, `access` pour les
-autres), `ping`, `cmd` (régie uniquement), `question`.
-Serveur → client : `welcome`, `state`, `pong`, `ack`, `key`, `error`.
+autres), `ping`, `cmd` (régie uniquement), `question`, `vote`.
+Serveur → client : `welcome`, `state`, `pong`, `ack`, `key`, `question_ok`,
+`vote_ok`, `error`.
 
 Les commandes portent des noms explicites : `timer.start`, `timer.setFormat`,
 `session.load`, `message.send`, `question.show`, `settings.update`,
-`room.setAccessCode`, `room.rotateKey`, `effect.play`, `effect.stop`…
+`poll.set`, `poll.open`, `poll.reveal`, `poll.stage`, `poll.reset`,
+`poll.clear`, `room.setAccessCode`, `room.rotateKey`, `effect.play`,
+`effect.stop`…
 
 ## Déploiement
 
 TimeStage a deux moitiés : une partie **statique** (le chrono lui-même, qui
 tourne dans le navigateur) et une partie **serveur** (les salles, la
-synchronisation WebSocket, les QR codes, les questions du public).
+synchronisation WebSocket, les QR codes, les questions et les sondages du public).
 
 ### GitHub Pages : version statique, sans serveur
 
@@ -226,7 +244,7 @@ qui est complet à lui seul :
 - fonctionnement **sans aucune connexion** grâce au service worker.
 
 Ce qui demande le serveur : régie et affichage sur **deux appareils
-différents**, QR codes de partage, questions du public.
+différents**, QR codes de partage, questions et sondages du public.
 
 Mise en route, une fois :
 
@@ -243,15 +261,16 @@ npm run build:static     # écrit dans dist/
 npx serve dist           # ou n'importe quel serveur de fichiers
 ```
 
-Si vous hébergez aussi le serveur complet, définissez la variable de dépôt
-`TIMESTAGE_SERVER_URL` (Settings → Secrets and variables → Actions → Variables) :
-la page statique affichera un lien direct vers votre instance.
+La page statique renvoie par défaut vers `https://arnisoundtools.com`, l'adresse
+publique du service. Pour pointer une autre instance (préproduction, serveur
+local), définissez la variable de dépôt `TIMESTAGE_SERVER_URL` (Settings →
+Secrets and variables → Actions → Variables) : elle est prioritaire.
 
 ### Render : serveur complet, gratuit
 
 Render exécute le serveur Node tel quel : **toutes les fonctions** marchent, y
-compris la régie et l'affichage sur deux appareils, les QR codes et les
-questions du public.
+compris la régie et l'affichage sur deux appareils, les QR codes, les questions
+et les sondages du public.
 
 1. Créer un compte sur [render.com](https://render.com) (aucune carte requise
    pour le plan gratuit).
@@ -260,9 +279,11 @@ questions du public.
 3. **Apply**. Le premier déploiement prend deux à trois minutes.
 4. L'application est en ligne sur `https://timestage-xxxx.onrender.com`.
 
-Pensez ensuite à renseigner cette URL dans la variable de dépôt
-`TIMESTAGE_SERVER_URL` (GitHub → Settings → Secrets and variables → Actions →
-Variables) : la page GitHub Pages affichera un lien vers votre instance.
+Faites ensuite pointer `arnisoundtools.com` vers ce service (Render → Settings →
+Custom Domains, puis l'enregistrement DNS indiqué). Pour publier une autre
+adresse sans toucher au code, renseignez `TIMESTAGE_SERVER_URL` (GitHub →
+Settings → Secrets and variables → Actions → Variables) : la page GitHub Pages
+renverra vers celle-là.
 
 #### Ce qu'implique le plan gratuit
 

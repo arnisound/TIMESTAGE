@@ -14,6 +14,7 @@ import path from 'node:path';
 
 import { MS } from '../shared/time.js';
 import { EFFECT_NAMES, EFFECT_LAYERS, EFFECTS, DEFAULT_EFFECT_DURATION } from '../shared/effects.js';
+import { POLL_LIMITS } from '../shared/poll.js';
 import * as T from '../shared/timer.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans I, O, 0, 1
@@ -21,6 +22,9 @@ const CODE_LENGTH = 5;
 const MAX_PARTS = 200;
 const MAX_QUESTIONS = 400;
 const MAX_PRESETS = 20;
+// Un sondage garde la trace de ceux qui ont vote pour qu'un meme appareil ne
+// compte qu'une fois. Ce plafond borne la memoire d'une salle tres suivie.
+const MAX_VOTERS = 5000;
 const ROOM_TTL_MS = 48 * MS.h;
 
 const CODE_RE = new RegExp(`^[${CODE_ALPHABET}]{4,8}$`);
@@ -179,6 +183,7 @@ export function createRoomState(code, name = '') {
     questions: [],
     shownQuestionId: null,
     effect: null, // { id, name, intensity, startedAt, durationMs, loop, layer }
+    poll: null, // sondage du public, voir createPoll()
     settings: defaultSettings(),
     logo: null, // { data: base64, type: 'image/png', version: n }
     access: null, // { salt, hash } quand la salle est protegee
@@ -270,11 +275,101 @@ export function clearRoomLogo(room, now = Date.now()) {
   return true;
 }
 
-/** Vue publique : ni jeton de controle, ni binaire du logo, ni code d'acces. */
-export function publicState(room) {
-  const { ownerToken, logo, access, ...rest } = room;
+// ---------------------------------------------------------------------------
+// Sondages du public
+//
+// Un seul sondage a la fois par salle : c'est ce qui se tient sur un ecran de
+// scene et ce que le public comprend sans explication. Le vote est identifie
+// par un jeton tire par le navigateur : il n'identifie personne, il empeche
+// seulement un meme appareil de compter plusieurs fois. Changer d'avis reste
+// possible tant que le vote est ouvert.
+// ---------------------------------------------------------------------------
+
+/**
+ * Construit un sondage a partir de ce qu'envoie la regie.
+ * @returns {{ok:true, poll:object} | {ok:false, error:string}}
+ */
+export function createPoll(question, options, now = Date.now()) {
+  const clean = cleanText(question, POLL_LIMITS.question);
+  if (!clean) return { ok: false, error: 'La question du sondage est vide.' };
+  const labels = (Array.isArray(options) ? options : [])
+    .map((entry) => cleanText(typeof entry === 'string' ? entry : entry?.label, POLL_LIMITS.option))
+    .filter(Boolean)
+    .slice(0, POLL_LIMITS.maxOptions);
+  if (labels.length < POLL_LIMITS.minOptions) {
+    return { ok: false, error: `Il faut au moins ${POLL_LIMITS.minOptions} reponses.` };
+  }
+  return {
+    ok: true,
+    poll: {
+      id: makeId('poll'),
+      question: clean,
+      options: labels.map((label) => ({ id: makeId('o'), label, votes: 0 })),
+      open: true, // le public peut voter
+      reveal: false, // les chiffres restent a la regie tant qu'elle ne les ouvre pas
+      onStage: false, // le sondage n'est pas encore a l'ecran
+      createdAt: now,
+      closedAt: 0,
+      voters: {}, // jeton de votant -> reponse choisie, jamais diffuse
+    },
+  };
+}
+
+/**
+ * Enregistre (ou deplace) la voix d'un votant.
+ * @returns {{ok:true, changed:boolean, optionId:string} | {ok:false, error:string}}
+ */
+export function addVote(room, { optionId, voterId, pollId } = {}, now = Date.now()) {
+  const poll = room.poll;
+  if (!poll) return { ok: false, error: 'Aucun sondage en cours.' };
+  // Le sondage a pu etre remplace pendant que le telephone votait.
+  if (pollId && pollId !== poll.id) return { ok: false, error: 'Ce sondage est termine.' };
+  if (!poll.open) return { ok: false, error: 'Le vote est clos.' };
+
+  const option = poll.options.find((x) => x.id === optionId);
+  if (!option) return { ok: false, error: 'Reponse inconnue.' };
+  const voter = cleanText(voterId, 64);
+  if (!voter) return { ok: false, error: 'Vote sans identifiant.' };
+
+  const previous = poll.voters[voter];
+  if (previous === option.id) return { ok: true, changed: false, optionId: option.id };
+  if (previous) {
+    const old = poll.options.find((x) => x.id === previous);
+    if (old) old.votes = Math.max(0, old.votes - 1);
+  } else if (Object.keys(poll.voters).length >= MAX_VOTERS) {
+    return { ok: false, error: 'Trop de votes enregistres pour ce sondage.' };
+  }
+  poll.voters[voter] = option.id;
+  option.votes += 1;
+  room.updatedAt = now;
+  room.rev += 1;
+  return { ok: true, changed: true, optionId: option.id };
+}
+
+/**
+ * Vue diffusable d'un sondage : la liste des votants ne sort jamais du serveur.
+ * `withResults` a faux masque les compteurs, pour que l'annonce des resultats
+ * reste la decision de la regie et n'influence pas ceux qui votent encore.
+ */
+function pollView(poll, withResults) {
+  if (!poll) return null;
+  const { voters, ...rest } = poll;
+  const visible = !!(withResults || poll.reveal);
   return {
     ...rest,
+    options: poll.options.map((option) => ({ ...option, votes: visible ? option.votes : 0 })),
+    voterCount: Object.keys(voters || {}).length,
+    resultsVisible: visible,
+  };
+}
+
+/** Vue publique : ni jeton de controle, ni binaire du logo, ni code d'acces. */
+export function publicState(room) {
+  const { ownerToken, logo, access, poll, ...rest } = room;
+  return {
+    ...rest,
+    // La regie depouille en direct, meme avant d'ouvrir les resultats.
+    poll: pollView(poll, true),
     hasAccessCode: !!access,
     // L'image est servie par une route dediee, versionnee pour le cache.
     logoUrl: logo ? `/api/rooms/${room.code}/logo?v=${logo.version}` : '',
@@ -289,6 +384,7 @@ export function viewerState(room) {
     ...state,
     questions: shown ? [shown] : [],
     questionCounts: countQuestions(room),
+    poll: pollView(room.poll, false),
   };
 }
 
@@ -521,6 +617,37 @@ export function applyCommand(room, name, payload = {}, now = Date.now()) {
       room.effect = null;
       break;
 
+    case 'poll.set': {
+      const result = createPoll(p.question, p.options, now);
+      if (!result.ok) return result;
+      // Un sondage deja a l'ecran cede la place au suivant sans que la regie
+      // ait a le remettre a l'antenne.
+      result.poll.onStage = !!room.poll?.onStage;
+      room.poll = result.poll;
+      break;
+    }
+    case 'poll.open':
+      if (!room.poll) return { ok: false, error: 'Aucun sondage.' };
+      room.poll.open = p.open === undefined ? true : !!p.open;
+      if (!room.poll.open) room.poll.closedAt = now;
+      break;
+    case 'poll.reveal':
+      if (!room.poll) return { ok: false, error: 'Aucun sondage.' };
+      room.poll.reveal = p.reveal === undefined ? true : !!p.reveal;
+      break;
+    case 'poll.stage':
+      if (!room.poll) return { ok: false, error: 'Aucun sondage.' };
+      room.poll.onStage = p.onStage === undefined ? true : !!p.onStage;
+      break;
+    case 'poll.reset':
+      if (!room.poll) return { ok: false, error: 'Aucun sondage.' };
+      for (const option of room.poll.options) option.votes = 0;
+      room.poll.voters = {};
+      break;
+    case 'poll.clear':
+      room.poll = null;
+      break;
+
     case 'room.setAccessCode': {
       const result = setAccessCode(room, p.code, now);
       if (!result.ok) return result;
@@ -532,6 +659,7 @@ export function applyCommand(room, name, payload = {}, now = Date.now()) {
       room.message = defaultMessage();
       room.effect = null;
       room.shownQuestionId = null;
+      if (room.poll) room.poll.onStage = false;
       room.session.activeId = null;
       for (const part of room.session.parts) part.done = false;
       break;
@@ -728,6 +856,9 @@ export class RoomStore {
         room.logo = room.logo?.data ? room.logo : null;
         room.access = room.access?.hash ? room.access : null;
         room.effect = room.effect?.name ? room.effect : null;
+        room.poll = room.poll?.id
+          ? { ...room.poll, voters: room.poll.voters && typeof room.poll.voters === 'object' ? room.poll.voters : {} }
+          : null;
         room.message = { ...defaultMessage(), ...(room.message || {}) };
         room.questions = Array.isArray(room.questions) ? room.questions : [];
         room.presets = Array.isArray(room.presets) && room.presets.length ? room.presets : defaultPresets();

@@ -174,6 +174,11 @@ export class RoomConnection extends EventTarget {
     return this.send({ t: 'question', text, author });
   }
 
+  /** Vote du public sur le sondage en cours. */
+  vote(pollId, optionId, voterId) {
+    return this.send({ t: 'vote', pollId, optionId, voterId });
+  }
+
   close() {
     this.closedByUser = true;
     this.stopPing();

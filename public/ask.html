@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Poser une question | TimeStage</title>
-<meta name="description" content="Envoyez votre question a la regie. Elle sera lue et validee avant affichage.">
+<title>Questions et sondages | TimeStage</title>
+<meta name="description" content="Votez au sondage en cours et envoyez votre question a la regie, qui la relit avant affichage.">
 <meta name="author" content="Arnisound Tools (Theo Arnissolle)">
 <meta name="copyright" content="© 2026 Arnisound Tools. Tous droits reserves.">
 <meta name="theme-color" content="#0b0e14">
@@ -21,6 +21,37 @@
   .live .value[data-phase="final"], .live .value[data-phase="overrun"] { color: var(--danger); }
   .live .value[data-phase="wrapup"] { color: var(--warn); }
   .mine li { font-size: .88rem; }
+  .poll-q { font-size: 1.05rem; font-weight: 600; margin: 0 0 .6rem; }
+  .poll-choices { display: grid; gap: .4rem; }
+  .poll-choice {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    overflow: hidden;
+    width: 100%;
+    padding: .7rem .8rem;
+    text-align: left;
+    font-size: .95rem;
+  }
+  .poll-choice .bar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(203, 138, 39, .28);
+    transition: width .4s ease;
+  }
+  .poll-choice > span:not(.bar) { position: relative; }
+  .poll-choice .key { flex: none; width: 1.3rem; color: var(--accent); font-family: var(--mono); font-weight: 700; }
+  .poll-choice .label { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+  .poll-choice .share { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .poll-choice[aria-pressed="true"] {
+    background: var(--panel-2);
+    border-color: var(--accent);
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+  .poll-choice .mark { flex: none; color: var(--accent); font-weight: 700; }
+  .poll-choice:disabled { opacity: .75; cursor: default; }
 </style>
 </head>
 <body>
@@ -46,7 +77,14 @@
     <div class="live"><span class="value mono" id="live-value">--:--</span></div>
   </section>
 
-  <section class="panel" style="margin-top:.8rem">
+  <section class="panel hidden" id="poll-panel" style="margin-top:.8rem">
+    <div class="panel-head"><h2 class="panel-title">Sondage</h2><span class="chip" id="poll-state">Ouvert</span></div>
+    <p class="poll-q" id="poll-question"></p>
+    <div class="poll-choices" id="poll-choices"></div>
+    <p class="muted" style="margin:.6rem 0 0"><small id="poll-foot"></small></p>
+  </section>
+
+  <section class="panel" id="question-panel" style="margin-top:.8rem">
     <div class="panel-head"><h2 class="panel-title">Votre question</h2></div>
     <form id="ask-form" class="stack">
       <div class="field">

@@ -18,6 +18,7 @@ import {
   RoomStore,
   applyCommand,
   addQuestion,
+  addVote,
   publicState,
   viewerState,
   tickRoom,
@@ -62,6 +63,21 @@ setInterval(() => {
 }, 60_000).unref();
 
 const clientIp = (req) => (req.ip || req.socket?.remoteAddress || 'inconnu').replace(/^::ffff:/, '');
+
+/**
+ * Garde-fous du vote. Le plafond par votant est serre : il laisse changer
+ * d'avis quelques fois, pas marteler le serveur. Le plafond par adresse est
+ * volontairement tres haut, car dans une salle tout le public sort souvent par
+ * la meme connexion : une limite serree y refuserait des votes legitimes.
+ */
+function voteAllowed(room, ip, voterId) {
+  const voter = String(voterId || '').slice(0, 64);
+  const perVoter = rateLimit(`vote:${room.code}:${voter}`, { limit: 10, windowMs: 60_000 });
+  if (!perVoter.ok) return { ok: false, error: 'Trop de changements de vote, patientez un instant.' };
+  const perNetwork = rateLimit(`votes:${room.code}:${ip}`, { limit: 600, windowMs: 60_000 });
+  if (!perNetwork.ok) return { ok: false, error: 'Trop de votes depuis ce reseau, patientez un instant.' };
+  return { ok: true };
+}
 
 // --- Fichiers statiques -----------------------------------------------------
 const staticOptions = {
@@ -144,6 +160,27 @@ app.post('/api/rooms/:code/questions', (req, res) => {
   store.scheduleSave();
   broadcast(room);
   res.status(201).json({ ok: true, id: result.question.id, status: result.question.status });
+});
+
+// Repli HTTP du vote, quand le WebSocket ne passe pas.
+app.post('/api/rooms/:code/vote', (req, res) => {
+  const room = store.get(req.params.code);
+  if (!room) return res.status(404).json({ error: 'Salle introuvable.' });
+  const ip = clientIp(req);
+  if (!checkAccess(room, req.body?.access)) {
+    const attempts = rateLimit(`access:${ip}`, { limit: 10, windowMs: 10 * 60_000 });
+    return res.status(attempts.ok ? 403 : 429).json({ error: 'Code d acces requis.', code: 'access_denied' });
+  }
+  const guard = voteAllowed(room, ip, req.body?.voterId);
+  if (!guard.ok) return res.status(429).json({ error: guard.error });
+
+  const result = addVote(room, { optionId: req.body?.optionId, voterId: req.body?.voterId, pollId: req.body?.pollId });
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  if (result.changed) {
+    store.scheduleSave();
+    broadcast(room);
+  }
+  res.json({ ok: true, pollId: room.poll.id, optionId: result.optionId });
 });
 
 // --- Logo de l'evenement ----------------------------------------------------
@@ -369,6 +406,23 @@ function handleMessage(ws, msg) {
       store.scheduleSave();
       broadcast(room);
       return send(ws, { t: 'question_ok', id: result.question.id, status: result.question.status });
+    }
+
+    case 'vote': {
+      const room = store.get(ws.roomCode);
+      if (!room) return send(ws, { t: 'error', code: 'no_room', message: 'Salle introuvable.' });
+      if (!ws.authorized) {
+        return send(ws, { t: 'error', code: 'access_denied', message: 'Code d acces requis.' });
+      }
+      const guard = voteAllowed(room, ws.ip, msg.voterId);
+      if (!guard.ok) return send(ws, { t: 'error', code: 'rate_limited', message: guard.error });
+      const result = addVote(room, { optionId: msg.optionId, voterId: msg.voterId, pollId: msg.pollId }, now);
+      if (!result.ok) return send(ws, { t: 'error', code: 'vote_refused', message: result.error });
+      if (result.changed) {
+        store.scheduleSave();
+        broadcast(room);
+      }
+      return send(ws, { t: 'vote_ok', pollId: room.poll.id, optionId: result.optionId });
     }
 
     default:

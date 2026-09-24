@@ -22,7 +22,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(ROOT, process.argv[2] || 'dist');
-const SERVER_URL = process.env.TIMESTAGE_SERVER_URL || '';
+// Adresse publique du service. TIMESTAGE_SERVER_URL reste prioritaire, pour
+// pointer une instance de test sans toucher au code.
+const SITE_URL = 'https://arnisoundtools.com';
+const SERVER_URL = process.env.TIMESTAGE_SERVER_URL || SITE_URL;
 // Logiciel proprietaire : la page publique ne renvoie pas vers le depot.
 // Sans instance complete connue, on oriente vers l'editeur.
 const CONTACT_URL = 'mailto:contact@arnisoundtools.com';
@@ -58,6 +61,8 @@ let html = fs.readFileSync(path.join(ROOT, 'public', 'offline.html'), 'utf8');
 // Chemins absolus -> relatifs, pour tenir dans un sous-dossier (/mon-depot/).
 html = html.replace(/(href|src)="\/(css|js|icons|manifest)/g, '$1="$2');
 html = html.replace('href="/legal"', 'href="legal.html"');
+// Le lien des mentions legales vit en pied de page : pas de doublon en haut.
+html = html.replace('<a class="btn sm ghost" href="/legal">Mentions legales</a>', '');
 
 html = html
   .replace('<title>Chrono hors ligne | TimeStage</title>', '<title>TimeStage, chronometre de scene</title>')

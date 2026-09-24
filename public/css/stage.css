@@ -49,7 +49,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 0;
+  /* Plancher : meme couvert de bandeaux, le chrono garde de quoi s'afficher.
+     C'est la raison d'etre de cette fenetre. */
+  min-height: 18%;
   gap: .2em;
 }
 .stage[data-align="top"] .stage-main { justify-content: flex-start; }
@@ -99,7 +101,8 @@
 /* Bandeaux bas : ils sont dans le flux, donc le chrono se reduit tout seul
    pour leur laisser la place au lieu d'etre recouvert. */
 .stage-overlay {
-  flex: 0 0 auto;
+  /* Les bandeaux cedent la place avant le chrono quand l'ecran est etroit. */
+  flex: 0 1 auto;
   max-height: 60%;
   overflow: hidden;
   padding: clamp(.6rem, 2.4vmin, 2rem) clamp(.8rem, 3vmin, 2.5rem);
@@ -144,6 +147,74 @@
   word-break: break-word;
 }
 .stage-question .q-author { font-size: clamp(.9rem, 2.6vmin, 2rem); color: #9b958a; font-weight: 500; }
+
+/* Sondage du public : le bandeau vit dans le flux comme les autres, donc le
+   chrono se reduit a son arrivee au lieu d'etre recouvert. */
+.stage-poll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35em;
+  background: rgba(10, 10, 13, .82);
+  border-top: .35vmin solid #cb8a27;
+}
+.stage-poll .p-label {
+  font-size: clamp(.7rem, 1.8vmin, 1.3rem);
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: #e2ab52;
+}
+.stage-poll .p-question {
+  font-size: clamp(1rem, 3.4vmin, 2.8rem);
+  max-width: 94%;
+  text-align: center;
+  word-break: break-word;
+}
+.stage-poll .p-options {
+  list-style: none;
+  margin: .2em 0 0;
+  padding: 0;
+  width: 94%;
+  display: grid;
+  gap: .3em;
+}
+.stage-poll .p-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  overflow: hidden;
+  padding: .3em .6em;
+  border: 1px solid rgba(203, 138, 39, .35);
+  border-radius: .4em;
+  font-size: clamp(.85rem, 2.6vmin, 2.1rem);
+  line-height: 1.2;
+}
+.stage-poll[data-size="sm"] .p-option { font-size: clamp(.75rem, 2vmin, 1.6rem); }
+.stage-poll .p-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(203, 138, 39, .3);
+  transition: width .5s ease;
+}
+.stage-poll .p-option.leading .p-bar { background: rgba(203, 138, 39, .55); }
+.stage-poll .p-key,
+.stage-poll .p-text,
+.stage-poll .p-share { position: relative; }
+.stage-poll .p-key {
+  flex: none;
+  width: 1.6em;
+  text-align: center;
+  color: #e2ab52;
+  font-family: var(--mono, monospace);
+}
+.stage-poll .p-text { flex: 1 1 auto; text-align: left; word-break: break-word; }
+.stage-poll .p-share { flex: none; font-variant-numeric: tabular-nums; }
+.stage-poll .p-foot { font-size: clamp(.7rem, 1.8vmin, 1.2rem); color: #9b958a; font-weight: 500; }
+.preview .stage-poll .p-question { font-size: clamp(.7rem, 2vmin, 1.1rem); }
+.preview .stage-poll .p-option { font-size: clamp(.55rem, 1.5vmin, .85rem); padding: .2em .4em; }
+.preview .stage-poll .p-label,
+.preview .stage-poll .p-foot { font-size: clamp(.45rem, 1.1vmin, .65rem); }
 
 .stage-flash {
   position: absolute;
@@ -199,7 +270,7 @@
    sans cela, un canvas positionne (meme en z-index 0) recouvrirait le contenu
    non positionne du flux. */
 .stage-main, .stage-top, .stage-bottom, .stage-progress { position: relative; z-index: 1; }
-.stage-message, .stage-question { position: relative; z-index: 2; }
+.stage-message, .stage-question, .stage-poll { position: relative; z-index: 2; }
 
 /* Logo de l'evenement ----------------------------------------------------- */
 .stage-logo {
@@ -255,5 +326,6 @@
 .stage.key-mode[data-show~="sub"] .stage-sub { display: block; }
 .stage.key-mode[data-show~="progress"] .stage-progress { display: block; }
 .stage.key-mode[data-show~="message"] .stage-message { display: block; }
+.stage.key-mode[data-show~="poll"] .stage-poll { display: flex; }
 /* Le texte porte souvent une ombre pour rester lisible sur l'image video. */
 .stage.key-mode[data-shadow="true"] .stage-time { text-shadow: 0 .04em .06em rgba(0, 0, 0, .65); }

@@ -397,6 +397,47 @@
       </div>
     </details>
 
+    <details class="panel section" data-section="sondage">
+      <summary class="panel-head">
+        <h2 class="panel-title">Sondage du public</h2>
+        <span class="chip" id="poll-chip">Aucun</span>
+      </summary>
+
+      <div class="poll-live hidden" id="poll-live">
+        <div class="row between">
+          <strong id="poll-live-question">…</strong>
+          <span class="chip" id="poll-votes">0 vote</span>
+        </div>
+        <ul class="poll-results" id="poll-results"></ul>
+        <div class="row tight" style="margin-top:.6rem">
+          <label class="check"><input type="checkbox" id="poll-open"> Vote ouvert</label>
+          <label class="check"><input type="checkbox" id="poll-reveal"> Resultats publics</label>
+          <label class="check"><input type="checkbox" id="poll-stage"> A l'ecran</label>
+        </div>
+        <div class="row tight" style="margin-top:.6rem">
+          <button class="btn sm" type="button" id="btn-poll-qr">QR public</button>
+          <button class="btn sm ghost" type="button" id="btn-poll-reset">Remettre a zero</button>
+          <button class="btn sm danger" type="button" id="btn-poll-clear" style="margin-left:auto">Supprimer</button>
+        </div>
+      </div>
+
+      <form id="poll-form" class="stack" style="margin-top:.8rem">
+        <div class="field">
+          <label for="poll-question">Question posee au public</label>
+          <input type="text" id="poll-question" maxlength="160" placeholder="Ex. Quel sujet voulez-vous approfondir ?">
+        </div>
+        <div class="field">
+          <label>Reponses proposees</label>
+          <div id="poll-options"></div>
+          <div class="row tight" style="margin-top:.4rem">
+            <button class="btn sm ghost" type="button" id="btn-poll-add">+ Reponse</button>
+            <small class="muted" id="poll-hint">2 a 6 reponses</small>
+          </div>
+        </div>
+        <button class="btn primary block" type="submit" id="btn-poll-launch">Lancer le sondage</button>
+      </form>
+    </details>
+
     <details class="panel section" open data-section="questions">
       <summary class="panel-head">
         <h2 class="panel-title">Questions du public</h2>

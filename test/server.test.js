@@ -365,6 +365,93 @@ test('les questions sont limitees en debit', async () => {
   assert.ok(codes.includes(429), 'la sixieme question doit etre refusee');
 });
 
+test('sondage : le public vote, la regie depouille, l ecran suit', async () => {
+  const room = await createRoom();
+
+  const control = connect();
+  await control.open();
+  control.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  await control.next((m) => m.t === 'welcome');
+
+  const display = connect();
+  await display.open();
+  display.send({ t: 'hello', room: room.code, role: 'display' });
+  await display.next((m) => m.t === 'welcome');
+
+  control.send({ t: 'cmd', name: 'poll.set', payload: { question: 'On prolonge ?', options: ['Oui', 'Non'] } });
+  const lance = await control.next((m) => m.t === 'state' && m.state.poll);
+  const [oui, non] = lance.state.poll.options;
+
+  const vote = await post(`/api/rooms/${room.code}/vote`, { pollId: lance.state.poll.id, optionId: oui.id, voterId: 'tel-1' });
+  assert.equal(vote.status, 200);
+
+  const compte = await control.next((m) => m.t === 'state' && m.state.poll?.options[0].votes === 1);
+  assert.equal(compte.state.poll.resultsVisible, true, 'la regie voit les chiffres');
+
+  const ecran = await display.next((m) => m.t === 'state' && m.state.poll?.voterCount === 1);
+  assert.equal(ecran.state.poll.options[0].votes, 0, "l'ecran ne revele rien avant la regie");
+  assert.equal(ecran.state.poll.resultsVisible, false);
+
+  control.send({ t: 'cmd', name: 'poll.reveal', payload: { reveal: true } });
+  const revele = await display.next((m) => m.t === 'state' && m.state.poll?.resultsVisible);
+  assert.equal(revele.state.poll.options[0].votes, 1);
+
+  // Le public vote aussi par WebSocket, et peut changer d'avis.
+  const public1 = connect();
+  await public1.open();
+  public1.send({ t: 'hello', room: room.code, role: 'viewer' });
+  await public1.next((m) => m.t === 'welcome');
+  public1.send({ t: 'vote', pollId: lance.state.poll.id, optionId: non.id, voterId: 'tel-1' });
+  const accuse = await public1.next((m) => m.t === 'vote_ok');
+  assert.equal(accuse.optionId, non.id);
+
+  const bascule = await control.next((m) => m.t === 'state' && m.state.poll?.options[1].votes === 1);
+  assert.equal(bascule.state.poll.options[0].votes, 0, 'la voix a change de camp, elle ne s est pas ajoutee');
+
+  control.send({ t: 'cmd', name: 'poll.open', payload: { open: false } });
+  await control.next((m) => m.t === 'state' && m.state.poll?.open === false);
+  public1.send({ t: 'vote', pollId: lance.state.poll.id, optionId: oui.id, voterId: 'tel-2' });
+  const refus = await public1.next((m) => m.t === 'error');
+  assert.equal(refus.code, 'vote_refused');
+
+  control.close();
+  display.close();
+  public1.close();
+});
+
+test('un spectateur ne peut pas lancer de sondage', async () => {
+  const room = await createRoom();
+  const client = connect();
+  await client.open();
+  client.send({ t: 'hello', room: room.code, role: 'viewer' });
+  await client.next((m) => m.t === 'welcome');
+  client.send({ t: 'cmd', name: 'poll.set', payload: { question: 'Qui commande ?', options: ['Moi', 'Toi'] } });
+  const error = await client.next((m) => m.t === 'error');
+  assert.equal(error.code, 'forbidden');
+  client.close();
+});
+
+test('le vote d une salle protegee demande le code d acces', async () => {
+  const room = await createRoom();
+  const control = connect();
+  await control.open();
+  control.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  await control.next((m) => m.t === 'welcome');
+  control.send({ t: 'cmd', name: 'poll.set', payload: { question: 'Protege ?', options: ['Oui', 'Non'] } });
+  const lance = await control.next((m) => m.t === 'state' && m.state.poll);
+  control.send({ t: 'cmd', name: 'room.setAccessCode', payload: { code: 'decibel2026' } });
+  await control.next((m) => m.t === 'state' && m.state.hasAccessCode);
+
+  const optionId = lance.state.poll.options[0].id;
+  const refuse = await post(`/api/rooms/${room.code}/vote`, { optionId, voterId: 'tel-9' });
+  assert.equal(refuse.status, 403);
+
+  const accepte = await post(`/api/rooms/${room.code}/vote`, { optionId, voterId: 'tel-9', access: 'decibel2026' });
+  assert.equal(accepte.status, 200);
+
+  control.close();
+});
+
 test('un message JSON invalide ne fait pas tomber le serveur', async () => {
   const client = connect();
   await client.open();

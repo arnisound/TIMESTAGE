@@ -25,6 +25,7 @@ test('la version statique contient tout le necessaire', () => {
     'js/lib/stage.js',
     'shared/time.js',
     'shared/timer.js',
+    'shared/poll.js',
     'css/base.css',
     'css/stage.css',
     'icons/icon.svg',
@@ -81,7 +82,8 @@ test('la version statique ne renvoie pas vers le depot', () => {
     const content = fs.readFileSync(path.join(OUT, file), 'utf8');
     assert.equal(/github\.com/i.test(content), false, 'lien vers le depot dans ' + file);
   }
-  assert.match(fs.readFileSync(path.join(OUT, 'index.html'), 'utf8'), /mailto:contact@arnisoundtools\.com/);
+  // La page statique renvoie vers le service lui-meme, pas vers son code.
+  assert.match(fs.readFileSync(path.join(OUT, 'index.html'), 'utf8'), /arnisoundtools\.com/);
 });
 
 test('la page statique annonce ce qui demande un serveur', () => {

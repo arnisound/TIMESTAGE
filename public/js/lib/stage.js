@@ -10,6 +10,7 @@
 import { formatDuration, formatClock, timeOfDayMs, MS } from '../../shared/time.js';
 import { readTimer } from '../../shared/timer.js';
 import { el, clear } from './dom.js';
+import { pollTally, pollLetter, pollVoteLabel } from '../../shared/poll.js';
 import { createEffects } from './effects.js';
 
 const PHASE_LABEL = {
@@ -37,6 +38,7 @@ export function createStage(root) {
   const stateNode = el('div', { class: 'stage-state' });
   const messageNode = el('div', { class: 'stage-overlay stage-message hidden', role: 'status' });
   const questionNode = el('div', { class: 'stage-overlay stage-question hidden' });
+  const pollNode = el('div', { class: 'stage-overlay stage-poll hidden' });
   const flash = el('div', { class: 'stage-flash' });
   const logoNode = el('img', { class: 'stage-logo', alt: '', hidden: true });
   const effectsCanvas = el('canvas', { class: 'stage-effects', 'aria-hidden': 'true' });
@@ -51,6 +53,7 @@ export function createStage(root) {
     el('div', { class: 'stage-bottom' }, [nextNode, stateNode]),
     messageNode,
     questionNode,
+    pollNode,
     logoNode,
     effectsCanvas,
     flash
@@ -62,12 +65,17 @@ export function createStage(root) {
   // zone centrale, qui se reduit quand un message ou une question s'affiche.
   const mainNode = timeNode.parentElement;
   let lastFit = '';
+  let lastPoll = '';
   const fit = (force = false) => {
     const text = timeNode.textContent || '';
     const width = mainNode.clientWidth || root.clientWidth || window.innerWidth;
     // Un logo place dans le flux prend de la hauteur : elle sort du budget.
     const inFlowLogo = logoNode.parentElement === mainNode && !logoNode.hidden ? logoNode.offsetHeight : 0;
-    const height = Math.max(40, (mainNode.clientHeight || root.clientHeight || window.innerHeight) - inFlowLogo);
+    // Une zone ecrasee par les bandeaux mesure zero : c'est une mesure, pas une
+    // absence de mesure. Retomber sur la hauteur de la scene donnerait un chrono
+    // plus grand que la place qui lui reste.
+    const available = mainNode.isConnected ? mainNode.clientHeight : root.clientHeight || window.innerHeight;
+    const height = Math.max(40, available - inFlowLogo);
     const scale = Number(root.dataset.timerScale) || 1;
     const key = `${text.length}|${width}|${height}|${scale}`;
     if (!force && key === lastFit) return;
@@ -182,6 +190,11 @@ export function createStage(root) {
       );
     }
 
+    // --- Sondage du public -------------------------------------------------
+    const poll = state.poll && state.poll.onStage ? state.poll : null;
+    pollNode.classList.toggle('hidden', !poll);
+    if (poll) drawPoll(poll);
+
     // --- Personnalisation de l'affichage -----------------------------------
     const timerScale = clampNumber(settings.timerScale, 0.4, 1.6, 1);
     if (root.dataset.timerScale !== String(timerScale)) {
@@ -238,7 +251,48 @@ export function createStage(root) {
     flash.classList.toggle('on', shouldFlash);
   }
 
-  return { update, fit: () => fit(true), nodes: { timeNode, messageNode, questionNode } };
+  /**
+   * Dessine le sondage. Reconstruit seulement quand quelque chose a bouge : la
+   * boucle tourne a chaque image, et refaire ces noeuds 60 fois par seconde
+   * ferait clignoter les barres.
+   */
+  function drawPoll(poll) {
+    const tally = pollTally(poll);
+    const key = JSON.stringify([poll.id, poll.question, poll.open, poll.resultsVisible, tally.options.map((o) => [o.label, o.votes])]);
+    if (key === lastPoll) return;
+    lastPoll = key;
+
+    pollNode.dataset.size = poll.options.length > 4 ? 'sm' : 'lg';
+    clear(pollNode);
+    pollNode.append(
+      el('div', { class: 'p-label', text: poll.open ? 'Sondage en cours' : 'Sondage' }),
+      el('div', { class: 'p-question', text: poll.question }),
+      el(
+        'ul',
+        { class: 'p-options' },
+        tally.options.map((option, i) =>
+          el('li', { class: 'p-option' + (poll.resultsVisible && option.leading ? ' leading' : '') }, [
+            // La barre est en fond : a zero, la reponse reste lisible.
+            el('span', { class: 'p-bar', style: { width: (poll.resultsVisible ? option.share * 100 : 0).toFixed(1) + '%' } }),
+            el('span', { class: 'p-key', text: pollLetter(i) }),
+            el('span', { class: 'p-text', text: option.label }),
+            poll.resultsVisible ? el('span', { class: 'p-share', text: Math.round(option.share * 100) + ' %' }) : null,
+          ])
+        )
+      ),
+      el('div', {
+        class: 'p-foot',
+        text: poll.resultsVisible
+          ? pollVoteLabel(tally.total)
+          : poll.open
+            ? 'Votez avec le QR code du public'
+            : 'Vote clos, resultats a venir',
+      })
+    );
+    fit(true);
+  }
+
+  return { update, fit: () => fit(true), nodes: { timeNode, messageNode, questionNode, pollNode } };
 }
 
 function clampNumber(value, min, max, fallback) {

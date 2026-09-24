@@ -12,7 +12,7 @@
 // ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
 // URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v8';
+const VERSION = 'timestage-v9';
 const BASE = new URL('./', self.location).pathname;
 const at = (path) => BASE + path;
 
@@ -41,6 +41,7 @@ const SHELL = [
   'shared/time.js',
   'shared/timer.js',
   'shared/effects.js',
+  'shared/poll.js',
   'icons/icon.svg',
   'icons/icon-maskable.png',
   'icons/logo.png',

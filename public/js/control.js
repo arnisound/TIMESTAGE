@@ -12,6 +12,7 @@ import { RoomConnection, roomUrls } from './lib/net.js';
 import { formatDuration, formatLabel, parseDuration, MS } from '../shared/time.js';
 import { readTimer } from '../shared/timer.js';
 import { EFFECTS } from '../shared/effects.js';
+import { POLL_LIMITS, pollTally, pollLetter, pollVoteLabel } from '../shared/poll.js';
 
 // --- Identification de la salle --------------------------------------------
 const params = new URLSearchParams(location.search);
@@ -141,6 +142,7 @@ function render() {
     state.questions,
     state.shownQuestionId,
     state.presets,
+    state.poll,
     questionTab,
   ]);
   if (signature !== lastSignature) {
@@ -148,6 +150,7 @@ function render() {
     renderParts();
     renderQuestions();
     renderPresets();
+    renderPoll();
   }
 }
 
@@ -254,6 +257,40 @@ function renderPresets() {
     );
   }
   if (!state.presets.length) grid.append(el('div', { class: 'empty', text: 'Aucun preset.' }));
+}
+
+function renderPoll() {
+  const poll = state.poll;
+  const chip = $('#poll-chip');
+  $('#poll-live').classList.toggle('hidden', !poll);
+  $('#btn-poll-launch').textContent = poll ? 'Remplacer le sondage' : 'Lancer le sondage';
+
+  if (!poll) {
+    chip.textContent = 'Aucun';
+    chip.className = 'chip';
+    return;
+  }
+
+  const tally = pollTally(poll);
+  chip.textContent = (poll.open ? 'Ouvert' : 'Clos') + ' · ' + pollVoteLabel(tally.total);
+  chip.className = 'chip ' + (poll.open ? 'ok' : '');
+  $('#poll-live-question').textContent = poll.question;
+  $('#poll-votes').textContent = pollVoteLabel(tally.total);
+  $('#poll-open').checked = !!poll.open;
+  $('#poll-reveal').checked = !!poll.reveal;
+  $('#poll-stage').checked = !!poll.onStage;
+
+  const list = clear($('#poll-results'));
+  for (const [i, option] of tally.options.entries()) {
+    list.append(
+      el('li', { class: 'poll-result' + (option.leading ? ' leading' : '') }, [
+        el('span', { class: 'bar', style: { width: (option.share * 100).toFixed(1) + '%' } }),
+        el('span', { class: 'key', text: pollLetter(i) }),
+        el('span', { class: 'label', text: option.label }),
+        el('span', { class: 'count', text: `${option.votes} · ${Math.round(option.share * 100)} %` }),
+      ])
+    );
+  }
 }
 
 // Rafraichit l'apercu en continu meme sans nouvel etat.
@@ -744,6 +781,67 @@ $('#btn-clear-questions').addEventListener('click', () => {
   if (confirm('Effacer toutes les questions ?')) cmd('question.clear', {});
 });
 
+// --- Sondage ----------------------------------------------------------------
+// Le formulaire reste disponible pendant qu'un sondage tourne : lancer le
+// suivant remplace le precedent, sans passer par une suppression.
+function addPollOption(value = '') {
+  const rows = $$('#poll-options .poll-option');
+  if (rows.length >= POLL_LIMITS.maxOptions) return;
+  const input = el('input', { type: 'text', maxLength: POLL_LIMITS.option, value });
+  const row = el('div', { class: 'poll-option' }, [
+    input,
+    el('button', {
+      class: 'btn sm ghost icon',
+      type: 'button',
+      text: '×',
+      title: 'Retirer cette reponse',
+      onclick: () => {
+        row.remove();
+        refreshPollOptions();
+      },
+    }),
+  ]);
+  $('#poll-options').append(row);
+  refreshPollOptions();
+  return input;
+}
+
+function refreshPollOptions() {
+  const rows = $$('#poll-options .poll-option');
+  rows.forEach((row, i) => {
+    row.querySelector('input').placeholder = 'Reponse ' + pollLetter(i);
+    // En dessous du minimum, retirer une reponse rendrait le sondage invalide.
+    row.querySelector('button').disabled = rows.length <= POLL_LIMITS.minOptions;
+  });
+  $('#btn-poll-add').disabled = rows.length >= POLL_LIMITS.maxOptions;
+  $('#poll-hint').textContent = `${rows.length} reponse${rows.length > 1 ? 's' : ''} sur ${POLL_LIMITS.maxOptions}`;
+}
+
+for (let i = 0; i < POLL_LIMITS.minOptions; i++) addPollOption();
+$('#btn-poll-add').addEventListener('click', () => addPollOption()?.focus());
+
+$('#poll-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const question = $('#poll-question').value.trim();
+  const options = $$('#poll-options input').map((input) => input.value.trim()).filter(Boolean);
+  if (!question) return toast('Ecrivez la question du sondage.', 'error');
+  if (options.length < POLL_LIMITS.minOptions) return toast(`Il faut au moins ${POLL_LIMITS.minOptions} reponses.`, 'error');
+  if (state?.poll && !confirm('Remplacer le sondage en cours ? Les votes deja recus seront perdus.')) return;
+  cmd('poll.set', { question, options });
+  toast('Sondage lance', 'ok');
+});
+
+$('#poll-open').addEventListener('change', (event) => cmd('poll.open', { open: event.target.checked }));
+$('#poll-reveal').addEventListener('change', (event) => cmd('poll.reveal', { reveal: event.target.checked }));
+$('#poll-stage').addEventListener('change', (event) => cmd('poll.stage', { onStage: event.target.checked }));
+$('#btn-poll-qr').addEventListener('click', () => openShare('ask'));
+$('#btn-poll-reset').addEventListener('click', () => {
+  if (confirm('Remettre les votes a zero ?')) cmd('poll.reset', {});
+});
+$('#btn-poll-clear').addEventListener('click', () => {
+  if (confirm('Supprimer le sondage et ses votes ?')) cmd('poll.clear', {});
+});
+
 // --- Partage ----------------------------------------------------------------
 let urls = roomUrls(code, token, (() => { try { return localStorage.getItem('timestage:access:' + code) || null; } catch { return null; } })());
 $('#btn-open-display').addEventListener('click', () => window.open(urls.display, 'timestage-display-' + code, 'noopener'));
@@ -756,7 +854,7 @@ function openShare(focus = null) {
   const cards = [
     { key: 'display', title: 'Affichage', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'Ecran de scene, retour, second appareil', url: urls.display },
     { key: 'video', title: 'Chrono video (alpha)', hint: 'Source navigateur pour melangeur video', url: urls.video },
-    { key: 'ask', title: 'Questions du public', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'A projeter ou imprimer', url: urls.ask },
+    { key: 'ask', title: 'Questions et sondages', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'Le public pose ses questions et vote', url: urls.ask },
     { key: 'control', title: 'Regie (cle incluse)', hint: 'Prendre la main depuis une tablette', url: urls.control },
   ].filter((card) => !focus || card.key === focus);
 
