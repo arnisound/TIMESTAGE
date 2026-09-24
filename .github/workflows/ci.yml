@@ -16,3 +16,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  # Le Worker Cloudflare rejoue les memes parcours dans le runtime de
+  # Cloudflare (workerd) : c'est la seule facon de verifier que le portage ne
+  # derive pas du serveur Node.
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # wrangler dev tourne en local (workerd) : aucun compte Cloudflare requis.
+      - run: npm run test:worker
+        env:
+          WRANGLER_SEND_METRICS: 'false'

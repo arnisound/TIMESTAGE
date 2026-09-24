@@ -46,7 +46,10 @@ export class RoomConnection extends EventTarget {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     let ws;
     try {
-      ws = new WebSocket(`${proto}//${location.host}/ws`);
+      // Le code voyage dans l'URL : sur Cloudflare, il designe le Durable
+      // Object a reveiller avant meme que la connexion soit acceptee. Le
+      // serveur Node l'ignore et lit le « hello » comme avant.
+      ws = new WebSocket(`${proto}//${location.host}/ws?room=${encodeURIComponent(this.code)}`);
     } catch {
       this.scheduleReconnect();
       return;

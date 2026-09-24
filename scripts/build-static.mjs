@@ -24,7 +24,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(ROOT, process.argv[2] || 'dist');
 // Adresse publique du service. TIMESTAGE_SERVER_URL reste prioritaire, pour
 // pointer une instance de test sans toucher au code.
-const SITE_URL = 'https://arnisoundtools.com';
+const SITE_URL = 'https://timestage.arnisoundtools.com';
 const SERVER_URL = process.env.TIMESTAGE_SERVER_URL || SITE_URL;
 // Logiciel proprietaire : la page publique ne renvoie pas vers le depot.
 // Sans instance complete connue, on oriente vers l'editeur.

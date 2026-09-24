@@ -9,7 +9,11 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test test/*.test.js",
-    "build:static": "node scripts/build-static.mjs"
+    "build:static": "node scripts/build-static.mjs",
+    "build:worker": "node scripts/build-worker.mjs",
+    "test:worker": "node scripts/build-worker.mjs && node --test test/cloudflare/worker.test.js",
+    "cf:dev": "npm run build:worker && wrangler dev",
+    "cf:deploy": "npm run build:worker && wrangler deploy"
   },
   "engines": {
     "node": ">=20"
@@ -28,5 +32,8 @@
   },
   "bugs": {
     "email": "contact@arnisoundtools.com"
+  },
+  "devDependencies": {
+    "wrangler": "^4.137.0"
   }
 }

@@ -181,15 +181,29 @@ L'état plié ou déplié de chacune est retenu d'une session à l'autre.
 
 ```
 brand/               Logo source (SVG d'origine, texte vectorisable)
-scripts/build-static.mjs  Génère dist/ : version statique (chrono hors ligne)
+core/rooms.js        État d'une salle : commandes, modération, sondages.
+                     Logique pure, partagée par le serveur Node et Cloudflare
 server/index.js      HTTP, API REST, WebSocket, service des fichiers statiques
-server/rooms.js      État des salles, commandes, modération, persistance
+server/rooms.js      Magasin de salles du serveur Node (mémoire + disque)
+worker/index.js      Worker Cloudflare : routage, API, aiguillage vers la salle
+worker/room.js       Une salle en Durable Object : état, WebSockets, alarmes
+worker/lobby.js      Limite les créations de salles par adresse
 shared/time.js       Formatage et analyse des durées (serveur + navigateur)
 shared/timer.js      Machine à états du chronomètre (fonctions pures)
+shared/poll.js       Limites et dépouillement des sondages
+scripts/build-static.mjs  Génère dist/ : version statique (chrono hors ligne)
+scripts/build-worker.mjs  Génère dist-worker/ : fichiers servis par Cloudflare
 public/              Pages, styles et scripts (aucune étape de build)
 public/sw.js         Service worker : mise en cache pour le mode hors ligne
 test/                Tests unitaires et d'intégration (node:test)
+test/cloudflare/     Parité du Worker, jouée dans le runtime Cloudflare
 ```
+
+**Deux plateformes, une seule logique.** `core/rooms.js` ne connaît ni le
+disque ni le réseau : il décrit ce qu'est une salle et ce que font les
+commandes. Le serveur Node l'entoure d'un magasin en mémoire ; le Worker
+Cloudflare l'entoure d'un Durable Object par salle. Les deux répondent au même
+protocole, et `npm run test:worker` le vérifie parcours par parcours.
 
 Le serveur est la source de vérité en ligne : il garde l'état de chaque salle et
 diffuse un instantané complet à chaque changement. Les clients ne comptent pas
@@ -265,6 +279,58 @@ La page statique renvoie par défaut vers `https://arnisoundtools.com`, l'adress
 publique du service. Pour pointer une autre instance (préproduction, serveur
 local), définissez la variable de dépôt `TIMESTAGE_SERVER_URL` (Settings →
 Secrets and variables → Actions → Variables) : elle est prioritaire.
+
+### Cloudflare Workers : la voie principale
+
+C'est le deploiement de reference. Une salle devient un **Durable Object** :
+un objet unique et persistant, un par code de salle, qui tient l'etat et les
+WebSockets ouverts. Le code de salle designe toujours le meme objet, ou que
+soit l'appareil qui s'y connecte.
+
+Ce que cela change par rapport a un hebergement classique :
+
+- **rien ne s'endort** : pas d'attente d'une minute a la premiere ouverture ;
+- **rien ne se perd** : une salle survit a un redeploiement, a la fermeture de
+  tous les ecrans et a une nuit entiere. Le dialogue « salle perdue » reste en
+  place, mais il ne sert plus qu'aux cas extremes ;
+- **rien ne tourne pour rien** : au lieu de balayer toutes les salles quatre
+  fois par seconde, chaque salle programme une alarme a l'echeance utile
+  (masquage d'un message, fin d'une animation, enchainement automatique).
+
+La logique metier n'est pas dupliquee. `core/rooms.js` est le meme module pour
+le serveur Node et pour le Worker ; seule la facon de ranger l'etat differe.
+`npm run test:worker` rejoue les parcours de bout en bout dans le runtime reel
+de Cloudflare, et tourne en integration continue a chaque poussee.
+
+#### Mise en ligne
+
+```bash
+npx wrangler login          # une seule fois
+npm run cf:deploy           # construit les fichiers statiques puis publie
+```
+
+Le service repond alors sur `https://timestage.<votre-compte>.workers.dev`.
+
+#### Domaine personnalise
+
+Dans le tableau de bord Cloudflare, ouvrir **Workers & Pages → timestage →
+Settings → Domains & Routes → Add → Custom domain**, et saisir
+`timestage.arnisoundtools.com`. Le domaine etant deja sur Cloudflare,
+l'enregistrement DNS et le certificat sont crees automatiquement : rien a
+ajouter a la main, et le site a la racine du domaine n'est pas touche.
+
+Le WebSocket passe sans reglage particulier. Cloudflare ferme les connexions
+inactives au bout d'une centaine de secondes ; TimeStage envoie un battement
+toutes les dix secondes, bien avant cette limite.
+
+#### Ce qu'il faut savoir
+
+- Les Durable Objects demandent un plan Workers qui les inclut. Verifier ce
+  point sur la page des tarifs Cloudflare avant de s'engager : c'est la seule
+  variable de cout de ce deploiement.
+- `wrangler dev` fait tourner le service en local dans le runtime de
+  Cloudflare, sans compte ni reseau : `npm run cf:dev`.
+- Les salles s'effacent d'elles-memes apres 48 heures sans activite.
 
 ### Render : serveur complet, gratuit
 
@@ -378,4 +444,6 @@ Pour une licence commerciale (intégration, hébergement, marque blanche),
 
 La page `/legal` contient un encadré **« À compléter »** : la loi française
 impose d'y indiquer le nom, l'adresse et le téléphone de votre hébergeur.
-Renseignez-les avant d'ouvrir le service au public.
+L'hébergeur y est nommé (Cloudflare, Inc.) ; il reste à reporter son adresse et
+son téléphone, tels qu'ils figurent dans ses propres conditions, avant d'ouvrir
+le service au public.

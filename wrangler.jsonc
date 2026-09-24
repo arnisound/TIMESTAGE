@@ -1,0 +1,39 @@
+// Deploiement de TimeStage sur Cloudflare Workers.
+//
+//   npm run cf:dev      lance le service en local (runtime Cloudflare reel)
+//   npm run cf:deploy   construit les fichiers statiques puis publie
+//
+// Les salles sont des Durable Objects : un objet unique et persistant par code
+// de salle, qui tient l'etat et les WebSockets. Contrairement a un hebergement
+// classique, rien ne s'endort et rien ne se perd au redeploiement.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "timestage",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Fichiers du site, assembles par scripts/build-worker.mjs.
+  // Cloudflare les sert directement, sans reveiller le Worker.
+  "assets": {
+    "directory": "dist-worker",
+    "binding": "ASSETS",
+    // /control sert control.html ; les adresses inconnues passent au Worker,
+    // qui sait quoi faire des URL courtes comme /d/ABCDE.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS", "class_name": "Room" },
+      { "name": "LOBBY", "class_name": "Lobby" }
+    ]
+  },
+
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Room", "Lobby"] }
+  ],
+
+  "observability": { "enabled": true }
+}

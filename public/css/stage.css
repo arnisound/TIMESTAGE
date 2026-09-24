@@ -133,6 +133,13 @@
   background: transparent;
   border-top: .35vmin solid #cb8a27;
 }
+.stage-question .q-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4em;
+  width: 100%;
+}
 .stage-question .q-label {
   font-size: clamp(.8rem, 2.2vmin, 1.6rem);
   text-transform: uppercase;
@@ -249,7 +256,14 @@
 /* Apercu reduit (regie) : on garde les proportions lisibles. */
 .preview .stage-message { font-size: clamp(.7rem, 2.2vmin, 1.4rem); border-top-width: 2px; }
 .preview .stage-question { border-top-width: 2px; }
-.preview .stage-question .q-label { font-size: clamp(.5rem, 1.1vmin, .7rem); letter-spacing: .12em; }
+.preview .stage-question .q-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4em;
+  width: 100%;
+}
+.stage-question .q-label { font-size: clamp(.5rem, 1.1vmin, .7rem); letter-spacing: .12em; }
 .preview .stage-question .q-text { font-size: clamp(.7rem, 2.2vmin, 1.4rem); }
 .preview .stage-question .q-author { font-size: clamp(.55rem, 1.3vmin, .8rem); }
 .stage-question[data-size="md"] .q-text { font-size: clamp(1rem, 3.4vmin, 3rem); }

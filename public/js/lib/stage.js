@@ -183,10 +183,15 @@ export function createStage(root) {
       // Les questions longues passent dans une taille plus sobre.
       questionNode.dataset.size = question.text.length > 140 ? 'sm' : question.text.length > 60 ? 'md' : 'lg';
       clear(questionNode);
+      // Les enfants passent par el(), qui ignore les valeurs nulles. Les
+      // donner directement a append() ecrirait « null » a l'ecran quand la
+      // question est anonyme, ce qui est le cas le plus frequent.
       questionNode.append(
-        el('div', { class: 'q-label', text: 'Question du public' }),
-        el('div', { class: 'q-text', text: question.text }),
-        question.author ? el('div', { class: 'q-author', text: 'par ' + question.author }) : null
+        el('div', { class: 'q-wrap' }, [
+          el('div', { class: 'q-label', text: 'Question du public' }),
+          el('div', { class: 'q-text', text: question.text }),
+          question.author ? el('div', { class: 'q-author', text: 'par ' + question.author }) : null,
+        ])
       );
     }
 
