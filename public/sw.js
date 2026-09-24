@@ -12,7 +12,7 @@
 // ou par un hebergement statique dans un sous-dossier (/mon-depot/). Toutes les
 // URL sont donc calculees a partir de sa propre adresse.
 
-const VERSION = 'timestage-v9';
+const VERSION = 'timestage-v10';
 const BASE = new URL('./', self.location).pathname;
 const at = (path) => BASE + path;
 
@@ -92,7 +92,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleNavigation(request, url));
     return;
   }
-  event.respondWith(staleWhileRevalidate(request));
+  // Scripts et feuilles de style : le reseau d'abord. Servir d'abord la copie
+  // en cache retardait chaque correction d'une ouverture entiere, ce qui est
+  // inacceptable pour un correctif de securite. Le cache reste le filet quand
+  // le reseau manque, donc le mode hors ligne ne perd rien.
+  event.respondWith(/\.(?:js|css)$/.test(url.pathname) ? networkFirst(request) : staleWhileRevalidate(request));
 });
 
 async function handleNavigation(request, url) {
@@ -125,6 +129,17 @@ function normalizeRoute(pathname) {
 
 function isCacheableRoute(pathname) {
   return ['', 'index.html', 'offline', 'display', 'ask'].map(at).includes(pathname);
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(VERSION);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    return (await cache.match(request)) || new Response('', { status: 504 });
+  }
 }
 
 async function staleWhileRevalidate(request) {

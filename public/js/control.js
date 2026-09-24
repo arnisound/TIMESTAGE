@@ -27,10 +27,12 @@ if (hashParams.get('t')) {
   try { localStorage.setItem(tokenKey, token); } catch { /* mode prive */ }
   history.replaceState(null, '', location.pathname + location.search);
 }
-// Le code d'acces est presente des la connexion : depuis qu'il protege aussi
-// la regie, la cle seule ne suffit plus a entrer.
-const storedAccess = (() => { try { return localStorage.getItem('timestage:access:' + code) || ''; } catch { return ''; } })();
-const conn = new RoomConnection({ code, role: 'control', token, access: storedAccess });
+// Le code d'acces n'est jamais garde sur l'appareil : il vit le temps de cette
+// page, et rien de plus. Le conserver reviendrait a ne demander qu'une fois ce
+// qui doit etre demande a chaque prise en main, et il serait de toute facon
+// deja present sur les telephones du public, qui le recoivent par QR code.
+let sessionAccess = '';
+const conn = new RoomConnection({ code, role: 'control', token, access: sessionAccess });
 const previewStage = createStage($('#preview-stage'));
 $('#preview-stage').dataset.compact = 'true';
 let state = null;
@@ -509,7 +511,6 @@ $('#btn-tune-reset').addEventListener('click', () => {
 });
 
 const LOGO_KEY = 'timestage:logo:' + code;
-const ACCESS_KEY = 'timestage:access:' + code;
 
 // --- Animations -------------------------------------------------------------
 let fxLayer = 'auto';
@@ -630,8 +631,13 @@ $('#btn-colors-reset').addEventListener('click', () => {
 });
 
 // --- Securite de la session -------------------------------------------------
-const readAccess = () => { try { return localStorage.getItem(ACCESS_KEY) || ''; } catch { return ''; } };
-const writeAccess = (value) => { try { localStorage.setItem(ACCESS_KEY, value || ''); } catch { /* prive */ } };
+// En memoire uniquement : fermer la fenetre oublie le code, et le rouvrir le
+// redemande. C'est le sens meme d'un second facteur.
+const readAccess = () => sessionAccess;
+const writeAccess = (value) => {
+  sessionAccess = value || '';
+  conn.access = sessionAccess;
+};
 
 function renderSecurity() {
   const on = !!state?.hasAccessCode;
@@ -647,9 +653,6 @@ $('#access-form').addEventListener('submit', (event) => {
   const value = $('#access-input').value.trim();
   if (value.length < 4) return toast('Le code doit faire au moins 4 caracteres.', 'error');
   writeAccess(value);
-  // La connexion doit porter le nouveau code : sinon la regie se fermerait la
-  // porte a sa prochaine reconnexion.
-  conn.access = value;
   urls = roomUrls(code, token, value);
   cmd('room.setAccessCode', { code: value });
   toast('Salle protegee. Les QR codes contiennent le code.', 'ok', 6000);
@@ -658,7 +661,6 @@ $('#access-form').addEventListener('submit', (event) => {
 $('#btn-access-clear').addEventListener('click', () => {
   if (!confirm('Retirer le code d\'acces ? La salle redeviendra ouverte a qui connait son code.')) return;
   writeAccess('');
-  conn.access = '';
   urls = roomUrls(code, token, null);
   cmd('room.setAccessCode', { code: '' });
 });
@@ -852,7 +854,7 @@ $('#btn-poll-clear').addEventListener('click', () => {
 });
 
 // --- Partage ----------------------------------------------------------------
-let urls = roomUrls(code, token, (() => { try { return localStorage.getItem('timestage:access:' + code) || null; } catch { return null; } })());
+let urls = roomUrls(code, token, null);
 $('#btn-open-display').addEventListener('click', () => window.open(urls.display, 'timestage-display-' + code, 'noopener'));
 $('#btn-qr-ask').addEventListener('click', () => openShare('ask'));
 $('#btn-share').addEventListener('click', () => openShare());
@@ -1064,7 +1066,10 @@ $('#access-dialog-form').addEventListener('submit', (event) => {
   const value = $('#access-dialog-input').value.trim();
   if (!value) return toast('Saisissez le code d\'acces.', 'error');
   writeAccess(value);
-  conn.access = value;
+  // Les QR codes de l'affichage et du public embarquent le code : sans cette
+  // ligne, une regie reprise sur un autre appareil distribuerait des liens que
+  // le public devrait completer a la main.
+  urls = roomUrls(code, token, value);
   conn.closedByUser = false;
   conn.attempt = 0;
   conn.connect();

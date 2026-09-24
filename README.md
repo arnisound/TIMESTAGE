@@ -112,6 +112,11 @@ demande simplement de coller ce lien.
   et qui se photographie, le code non. Le QR code « Régie » ne le contient
   volontairement pas, sans quoi il ne protégerait rien. La régie déjà connectée
   au moment où le code est posé n'est pas interrompue.
+- **La régie ne garde pas le code sur l'appareil.** Il vit le temps de la
+  fenêtre : la rouvrir le redemande. C'est le sens d'un second facteur, et
+  c'est aussi nécessaire parce que les téléphones du public reçoivent ce code
+  par QR code et le conservent : s'en servir pour la régie annulerait la
+  protection sur exactement les appareils dont il faut se méfier.
 - Le code est stocké **haché et salé**, jamais en clair, et comparé à temps
   constant. Il n'apparaît dans aucun état diffusé : seul un drapeau
   « salle protégée » circule. Les tentatives sont limitées par IP.
