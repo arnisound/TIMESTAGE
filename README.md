@@ -107,6 +107,11 @@ demande simplement de coller ce lien.
   code de salle peut ouvrir l'affichage et envoyer des questions ; avec lui,
   l'affichage et le public doivent le saisir. Les QR codes générés par la régie
   le contiennent déjà, donc scanner suffit.
+- **Le code vaut aussi pour la régie.** Une salle protégée demande la clé *et*
+  le code pour prendre la main : la clé voyage dans un QR code que l'on projette
+  et qui se photographie, le code non. Le QR code « Régie » ne le contient
+  volontairement pas, sans quoi il ne protégerait rien. La régie déjà connectée
+  au moment où le code est posé n'est pas interrompue.
 - Le code est stocké **haché et salé**, jamais en clair, et comparé à temps
   constant. Il n'apparaît dans aucun état diffusé : seul un drapeau
   « salle protégée » circule. Les tentatives sont limitées par IP.
@@ -159,10 +164,18 @@ demande simplement de coller ce lien.
 - « Ouvrir l'affichage » lance une seconde fenêtre (second écran, vidéoprojecteur)
   synchronisée par `BroadcastChannel`, toujours sans réseau.
 
-La fenêtre de régie est organisée en sections repliables : chronomètre toujours
-visible, puis mode & format, déroulé, affichage, message, animations, sécurité,
-sondage et questions.
-L'état plié ou déplié de chacune est retenu d'une session à l'autre.
+La fenêtre de régie est organisée en trois colonnes de sections repliables :
+
+| Colonne | Contenu |
+| --- | --- |
+| Gauche | Chronomètre (toujours visible), mode & format, affichage |
+| Milieu | Déroulé de la session, questions du public, sondage |
+| Droite | Message à l'écran, animations, sécurité |
+
+La gauche règle **le chrono et son apparence**, le milieu suit **le déroulement
+et la salle**, la droite envoie **ce qui s'affiche par-dessus**. L'état plié ou
+déplié de chaque section est retenu d'une session à l'autre. Sous 1180 px la
+mise en page passe à deux colonnes, puis à une seule sous 780 px.
 
 ## Raccourcis clavier (régie)
 

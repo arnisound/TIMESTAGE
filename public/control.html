@@ -35,7 +35,7 @@
 
 <main class="layout">
 
-  <!-- Colonne 1 : chrono -->
+  <!-- Colonne 1 : le chrono et sa forme -->
   <div class="col-stack">
     <section class="panel">
       <div class="panel-head">
@@ -147,42 +147,6 @@
         <input type="checkbox" id="overrun-input"> Continuer en negatif apres zero
       </label>
     </details>
-  </div>
-
-  <!-- Colonne 2 : deroule -->
-  <div class="col-stack">
-    <details class="panel section" open data-section="deroule">
-      <summary class="panel-head">
-        <h2 class="panel-title">Deroule de la session</h2>
-        <span class="chip" id="parts-count">0 partie</span>
-      </summary>
-      <div class="row tight">
-        <button class="btn sm" id="btn-prev">← Precedente</button>
-        <button class="btn sm" id="btn-next">Suivante →</button>
-        <label class="check" style="margin-left:auto">
-          <input type="checkbox" id="auto-advance"> Enchainer
-        </label>
-      </div>
-      <ul class="list" id="parts-list" style="margin-top:.6rem"></ul>
-      <form id="part-form" class="stack" style="margin-top:.7rem">
-        <div class="field-row">
-          <div class="field grow">
-            <label for="part-title">Nouvelle partie</label>
-            <input type="text" id="part-title" placeholder="Titre" maxlength="120" required>
-          </div>
-          <div class="field" style="width:6.5rem">
-            <label for="part-duration">Duree</label>
-            <input type="text" id="part-duration" class="mono" placeholder="10:00" value="10:00">
-          </div>
-          <button class="btn" type="submit">Ajouter</button>
-        </div>
-      </form>
-      <div class="row tight" style="margin-top:.6rem">
-        <button class="btn sm ghost" id="btn-export">Exporter</button>
-        <button class="btn sm ghost" id="btn-import">Importer</button>
-        <button class="btn sm danger" id="btn-clear-parts" style="margin-left:auto">Vider</button>
-      </div>
-    </details>
 
     <details class="panel section" data-section="affichage">
       <summary class="panel-head"><h2 class="panel-title">Affichage</h2></summary>
@@ -289,7 +253,105 @@
     </details>
   </div>
 
-  <!-- Colonne 3 : messages et questions -->
+  <!-- Colonne 2 : le deroule et le public -->
+  <div class="col-stack">
+    <details class="panel section" open data-section="deroule">
+      <summary class="panel-head">
+        <h2 class="panel-title">Deroule de la session</h2>
+        <span class="chip" id="parts-count">0 partie</span>
+      </summary>
+      <div class="row tight">
+        <button class="btn sm" id="btn-prev">← Precedente</button>
+        <button class="btn sm" id="btn-next">Suivante →</button>
+        <label class="check" style="margin-left:auto">
+          <input type="checkbox" id="auto-advance"> Enchainer
+        </label>
+      </div>
+      <ul class="list" id="parts-list" style="margin-top:.6rem"></ul>
+      <form id="part-form" class="stack" style="margin-top:.7rem">
+        <div class="field-row">
+          <div class="field grow">
+            <label for="part-title">Nouvelle partie</label>
+            <input type="text" id="part-title" placeholder="Titre" maxlength="120" required>
+          </div>
+          <div class="field" style="width:6.5rem">
+            <label for="part-duration">Duree</label>
+            <input type="text" id="part-duration" class="mono" placeholder="10:00" value="10:00">
+          </div>
+          <button class="btn" type="submit">Ajouter</button>
+        </div>
+      </form>
+      <div class="row tight" style="margin-top:.6rem">
+        <button class="btn sm ghost" id="btn-export">Exporter</button>
+        <button class="btn sm ghost" id="btn-import">Importer</button>
+        <button class="btn sm danger" id="btn-clear-parts" style="margin-left:auto">Vider</button>
+      </div>
+    </details>
+
+    <details class="panel section" open data-section="questions">
+      <summary class="panel-head">
+        <h2 class="panel-title">Questions du public</h2>
+        <span class="chip" id="questions-chip">Ouvertes</span>
+      </summary>
+      <label class="check" style="margin-bottom:.5rem"><input type="checkbox" id="questions-open"> Accepter les questions</label>
+      <div class="row between">
+        <div class="tabs" id="q-tabs" role="tablist">
+          <button role="tab" data-tab="pending" aria-selected="true">En attente <span id="count-pending">0</span></button>
+          <button role="tab" data-tab="approved" aria-selected="false">Validees <span id="count-approved">0</span></button>
+          <button role="tab" data-tab="all" aria-selected="false">Toutes</button>
+        </div>
+        <button class="btn sm ghost" id="btn-qr-ask">QR public</button>
+      </div>
+      <ul class="list" id="questions-list" style="margin-top:.6rem"></ul>
+      <div class="row tight" style="margin-top:.6rem">
+        <label class="check"><input type="checkbox" id="require-approval"> Validation obligatoire</label>
+        <button class="btn sm danger" id="btn-clear-questions" style="margin-left:auto">Effacer</button>
+      </div>
+    </details>
+
+    <details class="panel section" data-section="sondage">
+      <summary class="panel-head">
+        <h2 class="panel-title">Sondage du public</h2>
+        <span class="chip" id="poll-chip">Aucun</span>
+      </summary>
+
+      <div class="poll-live hidden" id="poll-live">
+        <div class="row between">
+          <strong id="poll-live-question">…</strong>
+          <span class="chip" id="poll-votes">0 vote</span>
+        </div>
+        <ul class="poll-results" id="poll-results"></ul>
+        <div class="row tight" style="margin-top:.6rem">
+          <label class="check"><input type="checkbox" id="poll-open"> Vote ouvert</label>
+          <label class="check"><input type="checkbox" id="poll-reveal"> Resultats publics</label>
+          <label class="check"><input type="checkbox" id="poll-stage"> A l'ecran</label>
+        </div>
+        <div class="row tight" style="margin-top:.6rem">
+          <button class="btn sm" type="button" id="btn-poll-qr">QR public</button>
+          <button class="btn sm ghost" type="button" id="btn-poll-reset">Remettre a zero</button>
+          <button class="btn sm danger" type="button" id="btn-poll-clear" style="margin-left:auto">Supprimer</button>
+        </div>
+      </div>
+
+      <form id="poll-form" class="stack" style="margin-top:.8rem">
+        <div class="field">
+          <label for="poll-question">Question posee au public</label>
+          <input type="text" id="poll-question" maxlength="160" placeholder="Ex. Quel sujet voulez-vous approfondir ?">
+        </div>
+        <div class="field">
+          <label>Reponses proposees</label>
+          <div id="poll-options"></div>
+          <div class="row tight" style="margin-top:.4rem">
+            <button class="btn sm ghost" type="button" id="btn-poll-add">+ Reponse</button>
+            <small class="muted" id="poll-hint">2 a 6 reponses</small>
+          </div>
+        </div>
+        <button class="btn primary block" type="submit" id="btn-poll-launch">Lancer le sondage</button>
+      </form>
+    </details>
+  </div>
+
+  <!-- Colonne 3 : ce qu on envoie a l ecran -->
   <div class="col-stack">
     <details class="panel section" open data-section="message">
       <summary class="panel-head">
@@ -381,6 +443,9 @@
         Sans code d'acces, toute personne connaissant le code de salle peut ouvrir l'affichage
         et envoyer des questions. Avec un code, l'affichage et le public doivent le saisir :
         les QR codes generes ici le contiennent deja.
+        <strong>Prendre la main sur la regie demande alors la cle et le code</strong>, car la cle
+        voyage dans un QR code que l'on peut photographier. Notez ce code : sans lui, aucun autre
+        appareil ne pourra piloter cette salle.
       </small></p>
       <form id="access-form" class="field-row">
         <div class="field grow">
@@ -396,69 +461,8 @@
         <button class="btn sm danger" id="btn-rotate-key">Renouveler</button>
       </div>
     </details>
-
-    <details class="panel section" data-section="sondage">
-      <summary class="panel-head">
-        <h2 class="panel-title">Sondage du public</h2>
-        <span class="chip" id="poll-chip">Aucun</span>
-      </summary>
-
-      <div class="poll-live hidden" id="poll-live">
-        <div class="row between">
-          <strong id="poll-live-question">…</strong>
-          <span class="chip" id="poll-votes">0 vote</span>
-        </div>
-        <ul class="poll-results" id="poll-results"></ul>
-        <div class="row tight" style="margin-top:.6rem">
-          <label class="check"><input type="checkbox" id="poll-open"> Vote ouvert</label>
-          <label class="check"><input type="checkbox" id="poll-reveal"> Resultats publics</label>
-          <label class="check"><input type="checkbox" id="poll-stage"> A l'ecran</label>
-        </div>
-        <div class="row tight" style="margin-top:.6rem">
-          <button class="btn sm" type="button" id="btn-poll-qr">QR public</button>
-          <button class="btn sm ghost" type="button" id="btn-poll-reset">Remettre a zero</button>
-          <button class="btn sm danger" type="button" id="btn-poll-clear" style="margin-left:auto">Supprimer</button>
-        </div>
-      </div>
-
-      <form id="poll-form" class="stack" style="margin-top:.8rem">
-        <div class="field">
-          <label for="poll-question">Question posee au public</label>
-          <input type="text" id="poll-question" maxlength="160" placeholder="Ex. Quel sujet voulez-vous approfondir ?">
-        </div>
-        <div class="field">
-          <label>Reponses proposees</label>
-          <div id="poll-options"></div>
-          <div class="row tight" style="margin-top:.4rem">
-            <button class="btn sm ghost" type="button" id="btn-poll-add">+ Reponse</button>
-            <small class="muted" id="poll-hint">2 a 6 reponses</small>
-          </div>
-        </div>
-        <button class="btn primary block" type="submit" id="btn-poll-launch">Lancer le sondage</button>
-      </form>
-    </details>
-
-    <details class="panel section" open data-section="questions">
-      <summary class="panel-head">
-        <h2 class="panel-title">Questions du public</h2>
-        <span class="chip" id="questions-chip">Ouvertes</span>
-      </summary>
-      <label class="check" style="margin-bottom:.5rem"><input type="checkbox" id="questions-open"> Accepter les questions</label>
-      <div class="row between">
-        <div class="tabs" id="q-tabs" role="tablist">
-          <button role="tab" data-tab="pending" aria-selected="true">En attente <span id="count-pending">0</span></button>
-          <button role="tab" data-tab="approved" aria-selected="false">Validees <span id="count-approved">0</span></button>
-          <button role="tab" data-tab="all" aria-selected="false">Toutes</button>
-        </div>
-        <button class="btn sm ghost" id="btn-qr-ask">QR public</button>
-      </div>
-      <ul class="list" id="questions-list" style="margin-top:.6rem"></ul>
-      <div class="row tight" style="margin-top:.6rem">
-        <label class="check"><input type="checkbox" id="require-approval"> Validation obligatoire</label>
-        <button class="btn sm danger" id="btn-clear-questions" style="margin-left:auto">Effacer</button>
-      </div>
-    </details>
   </div>
+
 </main>
 
 <!-- Partage -->
@@ -540,6 +544,27 @@
 </dialog>
 
 <!-- Raccourcis -->
+<dialog id="access-dialog">
+  <form id="access-dialog-form">
+    <div class="dialog-body">
+      <h2>Code d'acces</h2>
+      <p class="muted">
+        La salle <strong id="access-dialog-code"></strong> est protegee. La cle de regie ne suffit
+        pas : elle voyage dans un QR code, le code d'acces non. Saisissez-le pour prendre la main.
+      </p>
+      <div class="field">
+        <label for="access-dialog-input">Code d'acces de la salle</label>
+        <input type="text" id="access-dialog-input" maxlength="32" autocomplete="off" spellcheck="false" required>
+      </div>
+      <p class="muted"><small>Il vous a ete donne par la personne qui a ouvert la session.</small></p>
+    </div>
+    <menu class="dialog-actions">
+      <a class="btn ghost" id="access-dialog-display" href="#">Ouvrir l'affichage a la place</a>
+      <button class="btn primary" type="submit">Entrer</button>
+    </menu>
+  </form>
+</dialog>
+
 <dialog id="help-dialog">
   <div class="dialog-head"><h2>Raccourcis clavier</h2><button class="btn sm ghost" data-close>Fermer</button></div>
   <div class="dialog-body">

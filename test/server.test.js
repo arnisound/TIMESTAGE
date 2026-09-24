@@ -190,12 +190,31 @@ test('une salle protegee refuse l entree sans le bon code', async () => {
   assert.equal(welcome.role, 'display');
   ecran.close();
 
-  // La regie entre avec sa cle, sans connaitre le code d'acces.
+  // La cle de regie ne suffit pas : elle voyage dans un QR code que l'on
+  // projette, le code d'acces non. Prendre la main demande les deux.
+  const sansCode = connect();
+  await sansCode.open();
+  sansCode.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  assert.equal((await sansCode.next((m) => m.t === 'error')).code, 'access_denied');
+  sansCode.close();
+
+  // Le code seul ne donne pas davantage la regie.
+  const sansCle = connect();
+  await sansCle.open();
+  sansCle.send({ t: 'hello', room: room.code, role: 'control', token: 'faux-jeton', access: 'motdepasse' });
+  assert.equal((await sansCle.next((m) => m.t === 'error')).code, 'forbidden');
+  sansCle.close();
+
+  // Avec les deux, la reprise fonctionne.
   const regie2 = connect();
   await regie2.open();
-  regie2.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  regie2.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken, access: 'motdepasse' });
   assert.equal((await regie2.next((m) => m.t === 'welcome')).role, 'control');
   regie2.close();
+
+  // La regie deja connectee quand le code a ete pose n'est pas ejectee.
+  control.send({ t: 'cmd', name: 'timer.start' });
+  assert.equal((await control.next((m) => m.t === 'state' && m.state.timer.running)).state.timer.running, true);
   control.close();
 });
 

@@ -335,8 +335,11 @@ function handleMessage(ws, msg) {
       if (wantsControl && !isOwner) {
         return send(ws, { t: 'error', code: 'forbidden', message: 'Jeton de controle invalide.' });
       }
-      // La regie entre avec sa cle ; tous les autres avec le code d'acces.
-      if (!isOwner && !checkAccess(room, msg.access)) {
+      // Le code d'acces vaut pour tout le monde, regie comprise. La cle de
+      // regie voyage dans un QR code, que l'on projette ou que l'on
+      // photographie ; le code, lui, ne quitte pas ceux a qui on le donne.
+      // Prendre la main demande donc les deux.
+      if (!checkAccess(room, msg.access)) {
         const attempts = rateLimit(`access:${ws.ip}`, { limit: 10, windowMs: 10 * 60_000 });
         return send(ws, {
           t: 'error',

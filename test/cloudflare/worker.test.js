@@ -229,7 +229,7 @@ test('sondage : vote, changement d avis et ouverture des resultats', async () =>
   votant.close();
 });
 
-test('une salle protegee filtre tout le monde sauf la regie', async () => {
+test('une salle protegee reclame le code, y compris pour la regie', async () => {
   const room = await createRoom();
   const control = connect(room.code);
   await control.open();
@@ -253,6 +253,19 @@ test('une salle protegee filtre tout le monde sauf la regie', async () => {
   await avec.open();
   avec.send({ t: 'hello', room: room.code, role: 'display', access: 'decibel2026' });
   await avec.next((m) => m.t === 'welcome');
+
+  // La cle de regie ne suffit plus : elle voyage dans un QR code, le code non.
+  const cleSeule = connect(room.code);
+  await cleSeule.open();
+  cleSeule.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken });
+  assert.equal((await cleSeule.next((m) => m.t === 'error')).code, 'access_denied');
+  cleSeule.close();
+
+  const lesDeux = connect(room.code);
+  await lesDeux.open();
+  lesDeux.send({ t: 'hello', room: room.code, role: 'control', token: room.ownerToken, access: 'decibel2026' });
+  assert.equal((await lesDeux.next((m) => m.t === 'welcome')).role, 'control');
+  lesDeux.close();
 
   assert.equal((await post(`/api/rooms/${room.code}/questions`, { text: 'Sans le code ?' })).status, 403);
   assert.equal((await post(`/api/rooms/${room.code}/questions`, { text: 'Avec le code ?', access: 'decibel2026' })).status, 201);

@@ -27,7 +27,10 @@ if (hashParams.get('t')) {
   try { localStorage.setItem(tokenKey, token); } catch { /* mode prive */ }
   history.replaceState(null, '', location.pathname + location.search);
 }
-const conn = new RoomConnection({ code, role: 'control', token });
+// Le code d'acces est presente des la connexion : depuis qu'il protege aussi
+// la regie, la cle seule ne suffit plus a entrer.
+const storedAccess = (() => { try { return localStorage.getItem('timestage:access:' + code) || ''; } catch { return ''; } })();
+const conn = new RoomConnection({ code, role: 'control', token, access: storedAccess });
 const previewStage = createStage($('#preview-stage'));
 $('#preview-stage').dataset.compact = 'true';
 let state = null;
@@ -65,6 +68,8 @@ conn.addEventListener('remote-error', (event) => {
   const { code: errCode, message } = event.detail;
   if (errCode === 'forbidden') {
     askForKey('Cle de regie refusee.');
+  } else if (errCode === 'access_denied' || errCode === 'rate_limited') {
+    askForAccess(errCode === 'rate_limited' ? message : '');
   } else if (errCode === 'no_room') {
     offerRestore();
   } else {
@@ -642,6 +647,9 @@ $('#access-form').addEventListener('submit', (event) => {
   const value = $('#access-input').value.trim();
   if (value.length < 4) return toast('Le code doit faire au moins 4 caracteres.', 'error');
   writeAccess(value);
+  // La connexion doit porter le nouveau code : sinon la regie se fermerait la
+  // porte a sa prochaine reconnexion.
+  conn.access = value;
   urls = roomUrls(code, token, value);
   cmd('room.setAccessCode', { code: value });
   toast('Salle protegee. Les QR codes contiennent le code.', 'ok', 6000);
@@ -650,6 +658,7 @@ $('#access-form').addEventListener('submit', (event) => {
 $('#btn-access-clear').addEventListener('click', () => {
   if (!confirm('Retirer le code d\'acces ? La salle redeviendra ouverte a qui connait son code.')) return;
   writeAccess('');
+  conn.access = '';
   urls = roomUrls(code, token, null);
   cmd('room.setAccessCode', { code: '' });
 });
@@ -855,7 +864,14 @@ function openShare(focus = null) {
     { key: 'display', title: 'Affichage', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'Ecran de scene, retour, second appareil', url: urls.display },
     { key: 'video', title: 'Chrono video (alpha)', hint: 'Source navigateur pour melangeur video', url: urls.video },
     { key: 'ask', title: 'Questions et sondages', hint: state?.hasAccessCode ? 'Code d\'acces inclus' : 'Le public pose ses questions et vote', url: urls.ask },
-    { key: 'control', title: 'Regie (cle incluse)', hint: 'Prendre la main depuis une tablette', url: urls.control },
+    {
+      key: 'control',
+      title: 'Regie (cle incluse)',
+      // La cle est dans le lien, jamais le code : c'est ce qui fait du code un
+      // second facteur, et non une formalite de plus.
+      hint: state?.hasAccessCode ? 'Le code d\'acces sera demande' : 'Prendre la main depuis une tablette',
+      url: urls.control,
+    },
   ].filter((card) => !focus || card.key === focus);
 
   for (const card of cards) {
@@ -1028,6 +1044,33 @@ $('#status').addEventListener('click', () => {
 });
 
 // --- Cle de regie manquante -------------------------------------------------
+/**
+ * Demande le code d'acces de la salle. Ouverte quand le serveur refuse
+ * l'entree : la cle de regie est bonne, mais la salle est protegee.
+ */
+function askForAccess(reason = '') {
+  const dialog = $('#access-dialog');
+  if (dialog.open) return;
+  $('#access-dialog-code').textContent = code;
+  $('#access-dialog-display').href = urls.display;
+  $('#access-dialog-input').value = '';
+  if (reason) toast(reason, 'error', 6000);
+  dialog.showModal();
+  $('#access-dialog-input').focus();
+}
+
+$('#access-dialog-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const value = $('#access-dialog-input').value.trim();
+  if (!value) return toast('Saisissez le code d\'acces.', 'error');
+  writeAccess(value);
+  conn.access = value;
+  conn.closedByUser = false;
+  conn.attempt = 0;
+  conn.connect();
+  $('#access-dialog').close();
+});
+
 function askForKey(reason = '') {
   const dialog = $('#key-dialog');
   if (dialog.open) return;

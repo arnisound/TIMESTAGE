@@ -261,8 +261,11 @@ export class Room extends DurableObject {
         if (wantsControl && !owner) {
           return send(ws, { t: 'error', code: 'forbidden', message: 'Jeton de controle invalide.' });
         }
-        // La regie entre avec sa cle ; tous les autres avec le code d'acces.
-        if (!owner && !checkAccess(this.room, msg.access)) {
+        // Le code d'acces vaut pour tout le monde, regie comprise. La cle de
+        // regie voyage dans un QR code, que l'on projette ou que l'on
+        // photographie ; le code, lui, ne quitte pas ceux a qui on le donne.
+        // Prendre la main demande donc les deux.
+        if (!checkAccess(this.room, msg.access)) {
           const ok = this.limiter.take(`access:${who.ip}`, 10, 10 * 60_000, now);
           return send(ws, {
             t: 'error',
