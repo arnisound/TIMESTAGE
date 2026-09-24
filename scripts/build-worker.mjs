@@ -9,6 +9,10 @@
 // Le serveur Node sert public/ a la racine et shared/ sous /shared. Cloudflare
 // ne monte qu'un seul dossier : on le compose ici, a l'identique, pour que les
 // memes pages fonctionnent sans modification sur les deux plateformes.
+//
+// wrangler lance ce script tout seul avant chaque deploiement et chaque
+// lancement local (champ « build » de wrangler.jsonc) : il n'y a pas d'etape
+// a penser, ni en local ni dans la construction automatique de Cloudflare.
 
 import fs from 'node:fs';
 import path from 'node:path';

@@ -302,14 +302,28 @@ le serveur Node et pour le Worker ; seule la facon de ranger l'etat differe.
 `npm run test:worker` rejoue les parcours de bout en bout dans le runtime reel
 de Cloudflare, et tourne en integration continue a chaque poussee.
 
-#### Mise en ligne
+#### Mise en ligne depuis GitHub (recommande)
+
+Cloudflare suit le depot et redeploie a chaque poussee.
+
+1. **Workers & Pages → Create → Workers → Import a repository**, autoriser
+   l'application Cloudflare sur le depot, puis choisir `arnisound/TIMESTAGE`.
+2. **Branche de production : `main`.** C'est la branche que Cloudflare
+   deploiera ; le Worker doit donc s'y trouver.
+3. Laisser la commande de construction **vide** et la commande de deploiement
+   sur `npx wrangler deploy`. Les fichiers du site sont assembles par wrangler
+   lui-meme (champ `build` de `wrangler.jsonc`) : il n'y a rien a saisir.
+4. Deployer. La premiere mise en ligne cree les deux classes de Durable
+   Objects (migration `v1`).
+
+Le service repond alors sur `https://timestage.<votre-compte>.workers.dev`.
+
+#### Mise en ligne depuis un poste
 
 ```bash
 npx wrangler login          # une seule fois
-npm run cf:deploy           # construit les fichiers statiques puis publie
+npm run cf:deploy           # assemble les fichiers puis publie
 ```
-
-Le service repond alors sur `https://timestage.<votre-compte>.workers.dev`.
 
 #### Domaine personnalise
 
@@ -330,6 +344,8 @@ toutes les dix secondes, bien avant cette limite.
   variable de cout de ce deploiement.
 - `wrangler dev` fait tourner le service en local dans le runtime de
   Cloudflare, sans compte ni reseau : `npm run cf:dev`.
+- La version de Node utilisee par la construction Cloudflare est fixee par le
+  fichier `.node-version`.
 - Les salles s'effacent d'elles-memes apres 48 heures sans activite.
 
 ### Render : serveur complet, gratuit

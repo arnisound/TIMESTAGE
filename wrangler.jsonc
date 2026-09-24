@@ -13,6 +13,12 @@
   "compatibility_date": "2025-09-01",
   "compatibility_flags": ["nodejs_compat"],
 
+  // Les fichiers du site sont assembles avant chaque deploiement et chaque
+  // lancement local. C'est wrangler qui declenche cette etape : le
+  // deploiement reste correct meme lance a la main ou par le systeme de
+  // construction de Cloudflare, sans reglage a saisir dans l'interface.
+  "build": { "command": "node scripts/build-worker.mjs" },
+
   // Fichiers du site, assembles par scripts/build-worker.mjs.
   // Cloudflare les sert directement, sans reveiller le Worker.
   "assets": {
