@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { createRoomState, makeCode, normalizeCode, defaultSettings, defaultMessage, defaultPresets, isOwner, isExpired, ROOM_TTL_MS } from '../core/rooms.js';
+import { createRoomState, makeCode, normalizeCode, defaultSettings, defaultMessage, defaultPresets, isOwner, isExpired, ROOM_TTL_MS, ROOM_MAX_MS } from '../core/rooms.js';
 import * as T from '../shared/timer.js';
 
 export * from '../core/rooms.js';
@@ -24,10 +24,11 @@ export * from '../core/rooms.js';
 // ---------------------------------------------------------------------------
 
 export class RoomStore {
-  constructor({ file = null, ttlMs = ROOM_TTL_MS } = {}) {
+  constructor({ file = null, ttlMs = ROOM_TTL_MS, maxMs = ROOM_MAX_MS } = {}) {
     this.rooms = new Map();
     this.file = file;
     this.ttlMs = ttlMs;
+    this.maxMs = maxMs;
     this.saveTimer = null;
     if (file) this.load();
   }
@@ -79,7 +80,7 @@ export class RoomStore {
   cleanup(now = Date.now(), isBusy = () => false) {
     let removed = 0;
     for (const [code, room] of this.rooms) {
-      if (isExpired(room, { now, busy: isBusy(code), ttlMs: this.ttlMs })) {
+      if (isExpired(room, { now, busy: isBusy(code), ttlMs: this.ttlMs, maxMs: this.maxMs })) {
         this.rooms.delete(code);
         removed++;
       }
@@ -132,6 +133,8 @@ export class RoomStore {
           : null;
         room.message = { ...defaultMessage(), ...(room.message || {}) };
         room.questions = Array.isArray(room.questions) ? room.questions : [];
+        // Au redemarrage plus personne n'est connecte : le delai repart d'ici.
+        room.emptyAt = Math.max(Number(room.emptyAt) || 0, Number(room.updatedAt) || 0);
         room.presets = Array.isArray(room.presets) && room.presets.length ? room.presets : defaultPresets();
         this.rooms.set(room.code, room);
       }

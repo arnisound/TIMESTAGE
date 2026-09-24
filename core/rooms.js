@@ -24,7 +24,11 @@ const MAX_PRESETS = 20;
 // Un sondage garde la trace de ceux qui ont vote pour qu'un meme appareil ne
 // compte qu'une fois. Ce plafond borne la memoire d'une salle tres suivie.
 const MAX_VOTERS = 5000;
-export const ROOM_TTL_MS = 48 * MS.h;
+// Duree de vie d'une salle : 24 h sans usage, et 50 h au maximum, meme si un
+// ecran reste branche. Le plafond evite qu'un appareil oublie dans une salle
+// garde vivante une session finie depuis longtemps.
+export const ROOM_TTL_MS = 24 * MS.h;
+export const ROOM_MAX_MS = 50 * MS.h;
 
 const CODE_RE = new RegExp(`^[${CODE_ALPHABET}]{4,8}$`);
 
@@ -181,6 +185,7 @@ export function createRoomState(code, name = '') {
     presets: defaultPresets(),
     questions: [],
     shownQuestionId: null,
+    emptyAt: now, // instant ou le dernier appareil s'est deconnecte
     effect: null, // { id, name, intensity, startedAt, durationMs, loop, layer }
     poll: null, // sondage du public, voir createPoll()
     settings: defaultSettings(),
@@ -735,7 +740,7 @@ export function addQuestion(room, { text, author }, now = Date.now()) {
  * n'est connecte. Sans cela, une echeance deja passee ferait redemander un
  * reveil immediat a chaque fois, en boucle.
  */
-export function nextDeadline(room, { now = Date.now(), busy = false, ttlMs = ROOM_TTL_MS } = {}) {
+export function nextDeadline(room, { now = Date.now(), busy = false, ttlMs = ROOM_TTL_MS, maxMs = ROOM_MAX_MS } = {}) {
   if (!room) return 0;
   const due = [];
 
@@ -753,14 +758,35 @@ export function nextDeadline(room, { now = Date.now(), busy = false, ttlMs = ROO
     }
   }
 
-  due.push((busy ? now : room.updatedAt) + ttlMs);
+  // Inactivite : le compte a rebours repart a chaque commande, et tant qu'un
+  // appareil est connecte. Plafond : il ne repart jamais au-dela.
+  due.push(idleSince(room, busy, now) + ttlMs);
+  due.push(room.updatedAt + maxMs);
   return Math.min(...due);
 }
 
+/**
+ * Depuis quand la salle ne sert plus : la derniere commande, ou le moment ou
+ * le dernier appareil s'est deconnecte, selon ce qui est le plus recent. Tant
+ * qu'un appareil est la, la salle sert, donc le point de depart est maintenant.
+ */
+function idleSince(room, busy, now) {
+  if (busy) return now;
+  return Math.max(room.updatedAt, room.emptyAt || 0);
+}
+
 /** Vrai si la salle n'a plus servi depuis assez longtemps pour etre effacee. */
-export function isExpired(room, { now = Date.now(), busy = false, ttlMs = ROOM_TTL_MS } = {}) {
+export function isExpired(room, { now = Date.now(), busy = false, ttlMs = ROOM_TTL_MS, maxMs = ROOM_MAX_MS } = {}) {
   if (!room) return false;
-  return !busy && now - room.updatedAt > ttlMs;
+  // Le plafond l'emporte : passe ce delai la salle part, ecran branche ou non.
+  if (now - room.updatedAt > maxMs) return true;
+  return now - idleSince(room, busy, now) > ttlMs;
+}
+
+/** Note que la salle vient de se vider : le delai d'inactivite repart de la. */
+export function markEmpty(room, now = Date.now()) {
+  if (!room) return;
+  room.emptyAt = now;
 }
 
 /** Expire les messages a masquage automatique. Renvoie true si l'etat a change. */

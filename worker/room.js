@@ -27,6 +27,7 @@ import {
   tickRoom,
   nextDeadline,
   isExpired,
+  markEmpty,
   checkAccess,
   isOwner,
   rotateOwnerToken,
@@ -353,17 +354,28 @@ export class Room extends DurableObject {
   }
 
   async webSocketClose() {
-    if (!this.room) return;
-    // Le nombre d'appareils connectes change : les autres doivent le voir, et
-    // si c'etait le dernier, le compte a rebours d'expiration repart.
-    this.broadcast(Date.now());
-    await this.rearm();
+    await this.onDeparture();
   }
 
   async webSocketError() {
+    await this.onDeparture();
+  }
+
+  /**
+   * Un appareil s'en va. Les autres doivent voir le compte changer, et si
+   * c'etait le dernier, le delai d'inactivite repart de cet instant precis :
+   * sans cela il courrait depuis la derniere commande, et une salle affichee
+   * pendant des heures disparaitrait aussitot l'ecran eteint.
+   */
+  async onDeparture() {
     if (!this.room) return;
-    this.broadcast(Date.now());
-    await this.rearm();
+    const now = Date.now();
+    this.broadcast(now);
+    if (this.liveSockets().length === 0) {
+      markEmpty(this.room, now);
+      await this.persist();
+    }
+    await this.rearm(now);
   }
 
   // --- Diffusion ------------------------------------------------------------
@@ -475,6 +487,8 @@ function hydrate(room) {
     ? { ...room.poll, voters: room.poll.voters && typeof room.poll.voters === 'object' ? room.poll.voters : {} }
     : null;
   room.access = room.access?.hash ? room.access : null;
+  // Une salle relue n'a plus personne : le delai repart de maintenant.
+  room.emptyAt = Math.max(Number(room.emptyAt) || 0, Number(room.updatedAt) || 0);
   return room;
 }
 

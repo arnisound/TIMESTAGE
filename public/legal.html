@@ -100,10 +100,12 @@
     <li>
       <strong>Les donnees d'une salle</strong> (nom de session, deroule, messages, reglages,
       logo televerse) : conservees le temps de la session, puis <strong>effacees
-      automatiquement 48 heures apres la derniere activite</strong>. Tant qu'un appareil reste
-      connecte a la salle, celle-ci est consideree comme en usage et n'est pas effacee : le
-      delai court a partir du moment ou le dernier ecran se deconnecte. Selon l'hebergement, un
-      redemarrage peut les effacer plus tot.
+      automatiquement 24 heures apres le dernier usage</strong>. Tant qu'un appareil reste
+      connecte, la salle est consideree comme en cours d'utilisation : le delai de 24 heures
+      court alors a partir du moment ou le dernier appareil se deconnecte. Dans tous les cas,
+      une salle est effacee <strong>au plus tard 50 heures apres la derniere action de la
+      regie</strong>, appareil connecte ou non. Selon l'hebergement, un redemarrage peut les
+      effacer plus tot.
     </li>
     <li>
       <strong>Les questions du public</strong> : le texte saisi et, facultativement, un prenom.

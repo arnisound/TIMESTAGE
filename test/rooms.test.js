@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RoomStore, createRoomState, applyCommand, addQuestion, viewerState, publicState, tickRoom, nextDeadline, isExpired, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo, setAccessCode, checkAccess, rotateOwnerToken } from '../server/rooms.js';
+import { RoomStore, createRoomState, applyCommand, markEmpty, addQuestion, viewerState, publicState, tickRoom, nextDeadline, isExpired, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo, setAccessCode, checkAccess, rotateOwnerToken } from '../server/rooms.js';
 import { MS } from '../shared/time.js';
 import { EFFECT_NAMES } from '../shared/effects.js';
 
@@ -404,19 +404,47 @@ test('le catalogue d animations est coherent', () => {
 // Expiration et reveils programmes
 // ---------------------------------------------------------------------------
 
-test('une salle affichee n expire pas, une salle oubliee si', () => {
-  const room = createRoomState('VEILL');
+test('duree de vie : 24 h sans usage, 50 h au maximum', () => {
   const now = Date.now();
-  room.updatedAt = now - 50 * MS.h; // plus vieille que les 48 h de duree de vie
+  const salle = (heuresDepuisCommande, heuresDepuisVide = heuresDepuisCommande) => {
+    const room = createRoomState('VEILL');
+    room.updatedAt = now - heuresDepuisCommande * MS.h;
+    room.emptyAt = now - heuresDepuisVide * MS.h;
+    return room;
+  };
 
-  assert.equal(isExpired(room, { now }), true, 'personne connecte : elle part');
-  assert.equal(isExpired(room, { now, busy: true }), false, 'un ecran l affiche : elle reste');
+  // Personne connecte : 24 h apres la derniere activite.
+  assert.equal(isExpired(salle(23), { now }), false);
+  assert.equal(isExpired(salle(25), { now }), true);
 
-  // Le point de detail qui compte : sans appareil connecte, l'echeance est
-  // deja passee, ce qui declenche l'effacement. Avec un appareil, elle est
-  // repoussee de 48 h, sinon le service se redemanderait un reveil en boucle.
-  assert.ok(nextDeadline(room, { now }) < now, 'echeance passee quand la salle est vide');
-  assert.equal(nextDeadline(room, { now, busy: true }), now + 48 * MS.h);
+  // Un ecran connecte tient la salle en vie, jusqu'au plafond de 50 h.
+  assert.equal(isExpired(salle(40), { now, busy: true }), false);
+  assert.equal(isExpired(salle(51), { now, busy: true }), true, 'le plafond l emporte');
+
+  // Apres le depart du dernier ecran, le delai repart de ce moment-la, et non
+  // de la derniere commande : une salle affichee des heures ne doit pas
+  // disparaitre sitot l'ecran eteint.
+  assert.equal(isExpired(salle(30, 10), { now }), false, 'vide depuis 10 h seulement');
+  assert.equal(isExpired(salle(30, 25), { now }), true, 'vide depuis 25 h');
+
+  // Le point qui evite l'emballement : avec un appareil connecte, l'echeance
+  // est devant, jamais derriere, sinon un reveil en redemanderait un aussitot.
+  const vieille = salle(40);
+  assert.ok(nextDeadline(vieille, { now }) < now, 'echeance passee quand la salle est vide');
+  assert.equal(nextDeadline(vieille, { now, busy: true }), vieille.updatedAt + 50 * MS.h, 'le plafond borne le reveil');
+  assert.ok(nextDeadline(salle(1), { now, busy: true }) > now, 'salle recente occupee : rendez-vous dans 24 h');
+});
+
+test('markEmpty repart du moment ou la salle se vide', () => {
+  const now = Date.now();
+  const room = createRoomState('VIDES');
+  room.updatedAt = now - 30 * MS.h;
+  room.emptyAt = now - 30 * MS.h;
+  assert.equal(isExpired(room, { now }), true);
+
+  markEmpty(room, now);
+  assert.equal(isExpired(room, { now }), false, 'elle vient de se vider : 24 h devant elle');
+  assert.equal(nextDeadline(room, { now }), Math.min(now + 24 * MS.h, room.updatedAt + 50 * MS.h));
 });
 
 test('la prochaine echeance est la plus proche des raisons de se reveiller', () => {
@@ -424,7 +452,7 @@ test('la prochaine echeance est la plus proche des raisons de se reveiller', () 
   const now = Date.now();
 
   // Sans rien de particulier, seule l'expiration compte.
-  assert.equal(nextDeadline(room, { now: room.updatedAt }), room.updatedAt + 48 * MS.h);
+  assert.equal(nextDeadline(room, { now: room.updatedAt }), room.updatedAt + 24 * MS.h);
 
   // Un message a masquage automatique passe devant.
   applyCommand(room, 'message.send', { text: 'Trois minutes', autoHideMs: 3 * MS.m }, now);
@@ -464,8 +492,10 @@ test('le magasin epargne les salles dont un ecran est encore connecte', () => {
   const vieille = store.create('Oubliee').room;
   const affichee = store.create('Affichee').room;
   const now = Date.now();
-  vieille.updatedAt = now - 2 * MS.h;
-  affichee.updatedAt = now - 2 * MS.h;
+  for (const room of [vieille, affichee]) {
+    room.updatedAt = now - 2 * MS.h;
+    room.emptyAt = now - 2 * MS.h;
+  }
 
   const efface = store.cleanup(now, (code) => code === affichee.code);
   assert.equal(efface, 1);

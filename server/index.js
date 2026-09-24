@@ -27,6 +27,7 @@ import {
   clearRoomLogo,
   checkAccess,
   rotateOwnerToken,
+  markEmpty,
 } from './rooms.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -316,11 +317,13 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    if (ws.roomCode) {
-      leave(ws.roomCode, ws);
-      const room = store.get(ws.roomCode);
-      if (room) broadcast(room);
-    }
+    if (!ws.roomCode) return;
+    leave(ws.roomCode, ws);
+    const room = store.get(ws.roomCode);
+    if (!room) return;
+    // Si c'etait le dernier appareil, le delai d'inactivite repart d'ici.
+    if (!roomSockets.has(room.code)) markEmpty(room);
+    broadcast(room);
   });
 });
 

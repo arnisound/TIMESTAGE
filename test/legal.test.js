@@ -5,6 +5,7 @@
  * exploitation sans autorisation ecrite prealable est interdite. Voir LICENSE.
  */
 import test from 'node:test';
+import { ROOM_TTL_MS, ROOM_MAX_MS } from '../core/rooms.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -58,7 +59,9 @@ test('les mentions legales portent les informations exigees', () => {
   }
   assert.match(legal, /Tous droits reserves/);
   // La description des donnees doit rester fidele au fonctionnement reel.
-  assert.match(legal, /48 heures/, 'la duree de conservation est annoncee');
+  // Les deux bornes doivent figurer, et correspondre a ce que fait le code.
+  assert.match(legal, /24 heures/, 'le delai d inactivite est annonce');
+  assert.match(legal, /50 heures/, 'le plafond absolu est annonce');
   assert.match(legal, /ne depose aucun cookie/i);
   assert.match(legal, /arnisoundtools\.com/, "l'adresse du service est annoncee");
   // Le sondage ajoute un traitement : il doit figurer dans la description.
@@ -125,4 +128,13 @@ test('aucun tiret cadratin dans les textes du projet', () => {
     const ligne = contenu.split('\n').findIndex((l) => /[\u2013\u2014]/.test(l));
     assert.equal(ligne, -1, `tiret cadratin dans ${fichier} ligne ${ligne + 1}`);
   }
+});
+
+test('les durees annoncees au public sont celles du code', () => {
+  const legal = read('public/legal.html');
+  const heures = (ms) => Math.round(ms / 3_600_000);
+  // Une mention legale qui promet autre chose que ce que le service fait n'est
+  // pas une approximation, c'est une information fausse.
+  assert.ok(legal.includes(`${heures(ROOM_TTL_MS)} heures apres le dernier usage`), 'delai d inactivite');
+  assert.ok(legal.includes(`${heures(ROOM_MAX_MS)} heures apres la derniere action`), 'plafond absolu');
 });

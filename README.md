@@ -363,9 +363,10 @@ toutes les dix secondes, bien avant cette limite.
   Cloudflare, sans compte ni reseau : `npm run cf:dev`.
 - La version de Node utilisee par la construction Cloudflare est fixee par le
   fichier `.node-version`.
-- Les salles s'effacent d'elles-memes 48 heures apres la derniere activite, a
-  condition que plus aucun appareil n'y soit connecte : un ecran allume tient
-  sa salle en vie aussi longtemps qu'il reste branche.
+- Les salles s'effacent d'elles-memes 24 heures apres le dernier usage. Un
+  appareil connecte compte comme un usage : le delai repart alors du moment ou
+  le dernier ecran se deconnecte. Plafond absolu : 50 heures apres la derniere
+  action de la regie, ecran branche ou non.
 
 ### Render : serveur complet, gratuit
 
@@ -430,7 +431,9 @@ location / {
 Servez l'application en HTTPS : le mode hors ligne (service worker), le plein
 écran et le Wake Lock l'exigent en dehors de `localhost`.
 
-Les salles inactives depuis 48 h sont purgées automatiquement.
+Les salles sont purgées automatiquement 24 h après le dernier usage, un
+appareil connecté comptant comme un usage, et au plus tard 50 h après la
+dernière action de la régie.
 
 ## Identité visuelle
 
