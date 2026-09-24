@@ -725,6 +725,44 @@ export function addQuestion(room, { text, author }, now = Date.now()) {
   return { ok: true, question };
 }
 
+/**
+ * Prochaine echeance qui demande au service de se reveiller : masquage d'un
+ * message, fin d'une animation, enchainement automatique, expiration de la
+ * salle. Fonction pure, pour que les deux plateformes calculent la meme chose.
+ *
+ * `busy` dit si des appareils sont connectes. Une salle affichee est une salle
+ * en usage : son compte a rebours d'expiration ne court que lorsque plus rien
+ * n'est connecte. Sans cela, une echeance deja passee ferait redemander un
+ * reveil immediat a chaque fois, en boucle.
+ */
+export function nextDeadline(room, { now = Date.now(), busy = false, ttlMs = ROOM_TTL_MS } = {}) {
+  if (!room) return 0;
+  const due = [];
+
+  const message = room.message;
+  if (message?.visible && message.autoHideMs > 0) due.push(message.sentAt + message.autoHideMs);
+
+  if (room.effect && !room.effect.loop) {
+    due.push(room.effect.startedAt + room.effect.durationMs + 3 * MS.s);
+  }
+
+  if (room.session?.autoAdvance && room.timer.mode === 'countdown' && room.timer.running) {
+    const i = room.session.parts.findIndex((x) => x.id === room.session.activeId);
+    if (i >= 0 && i + 1 < room.session.parts.length) {
+      due.push(now + Math.max(0, room.timer.durationMs - T.elapsedOf(room.timer, now)));
+    }
+  }
+
+  due.push((busy ? now : room.updatedAt) + ttlMs);
+  return Math.min(...due);
+}
+
+/** Vrai si la salle n'a plus servi depuis assez longtemps pour etre effacee. */
+export function isExpired(room, { now = Date.now(), busy = false, ttlMs = ROOM_TTL_MS } = {}) {
+  if (!room) return false;
+  return !busy && now - room.updatedAt > ttlMs;
+}
+
 /** Expire les messages a masquage automatique. Renvoie true si l'etat a change. */
 export function tickRoom(room, now = Date.now()) {
   let changed = false;

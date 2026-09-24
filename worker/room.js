@@ -25,6 +25,8 @@ import {
   publicState,
   viewerState,
   tickRoom,
+  nextDeadline,
+  isExpired,
   checkAccess,
   isOwner,
   rotateOwnerToken,
@@ -35,9 +37,7 @@ import {
   defaultSettings,
   defaultMessage,
   defaultPresets,
-  ROOM_TTL_MS,
 } from '../core/rooms.js';
-import { MS } from '../shared/time.js';
 import * as T from '../shared/timer.js';
 
 const json = (data, status = 200) => Response.json(data, { status });
@@ -352,20 +352,35 @@ export class Room extends DurableObject {
     }
   }
 
-  webSocketClose() {
-    // Le nombre d'appareils connectes change : les autres doivent le voir.
-    if (this.room) this.broadcast(Date.now());
+  async webSocketClose() {
+    if (!this.room) return;
+    // Le nombre d'appareils connectes change : les autres doivent le voir, et
+    // si c'etait le dernier, le compte a rebours d'expiration repart.
+    this.broadcast(Date.now());
+    await this.rearm();
   }
 
-  webSocketError() {
-    if (this.room) this.broadcast(Date.now());
+  async webSocketError() {
+    if (!this.room) return;
+    this.broadcast(Date.now());
+    await this.rearm();
   }
 
   // --- Diffusion ------------------------------------------------------------
 
+  /**
+   * Les sockets encore vivants. Un socket en train de se fermer figure encore
+   * dans la liste de l'objet : le compter afficherait un ecran de plus qu'il
+   * n'y en a, et ferait croire la salle occupee alors qu'elle vient de se
+   * vider.
+   */
+  liveSockets() {
+    return this.ctx.getWebSockets().filter((ws) => ws.readyState === WebSocket.READY_STATE_OPEN);
+  }
+
   audience() {
     const counts = { control: 0, display: 0, viewer: 0 };
-    for (const ws of this.ctx.getWebSockets()) {
+    for (const ws of this.liveSockets()) {
       const meta = ws.deserializeAttachment() || {};
       if (!meta.authorized) continue;
       counts[meta.role === 'control' ? 'control' : meta.role === 'display' ? 'display' : 'viewer'] += 1;
@@ -380,7 +395,7 @@ export class Room extends DurableObject {
 
   broadcast(now = Date.now()) {
     const cache = {};
-    for (const ws of this.ctx.getWebSockets()) {
+    for (const ws of this.liveSockets()) {
       const meta = ws.deserializeAttachment() || {};
       if (!meta.authorized) continue;
       const role = meta.role === 'control' ? 'control' : 'viewer';
@@ -405,30 +420,8 @@ export class Room extends DurableObject {
    * message, fin d'une animation, enchainement automatique, expiration de la
    * salle) et on ne se reveille qu'a ce moment-la. Rien ne tourne entre-temps.
    */
-  nextDeadline(now) {
-    const room = this.room;
-    if (!room) return 0;
-    const due = [];
-
-    const message = room.message;
-    if (message.visible && message.autoHideMs > 0) due.push(message.sentAt + message.autoHideMs);
-
-    if (room.effect && !room.effect.loop) due.push(room.effect.startedAt + room.effect.durationMs + 3 * MS.s);
-
-    if (room.session.autoAdvance && room.timer.mode === 'countdown' && room.timer.running) {
-      const i = room.session.parts.findIndex((x) => x.id === room.session.activeId);
-      if (i >= 0 && i + 1 < room.session.parts.length) {
-        due.push(now + Math.max(0, room.timer.durationMs - T.elapsedOf(room.timer, now)));
-      }
-    }
-
-    // Filet de securite : la salle s'efface d'elle-meme apres 48 h sans usage.
-    due.push(room.updatedAt + ROOM_TTL_MS);
-    return Math.min(...due);
-  }
-
   async rearm(now = Date.now()) {
-    const deadline = this.nextDeadline(now);
+    const deadline = nextDeadline(this.room, { now, busy: this.liveSockets().length > 0 });
     if (!deadline) return;
     const current = await this.ctx.storage.getAlarm();
     if (current === null || Math.abs(current - deadline) > 250) {
@@ -441,7 +434,7 @@ export class Room extends DurableObject {
     if (!this.room) return;
 
     // Salle oubliee : elle disparait avec tout ce qu'elle contenait.
-    if (now - this.room.updatedAt > ROOM_TTL_MS && this.ctx.getWebSockets().length === 0) {
+    if (isExpired(this.room, { now, busy: this.liveSockets().length > 0 })) {
       this.room = null;
       this.logoData = '';
       await this.ctx.storage.deleteAll();

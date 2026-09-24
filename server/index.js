@@ -456,7 +456,9 @@ setInterval(() => {
   }
 }, 250).unref();
 
-setInterval(() => store.cleanup(), 30 * 60_000).unref();
+// Une salle dont un ecran est encore connecte n'est pas oubliee, meme si la
+// regie n'a envoye aucune commande depuis longtemps.
+setInterval(() => store.cleanup(Date.now(), (code) => (roomSockets.get(code)?.size || 0) > 0), 30 * 60_000).unref();
 
 function shutdown(signal) {
   console.log(`[timestage] arret (${signal})`);

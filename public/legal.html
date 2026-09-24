@@ -99,9 +99,11 @@
   <ul>
     <li>
       <strong>Les donnees d'une salle</strong> (nom de session, deroule, messages, reglages,
-      logo televerse) : conservees en memoire vive du serveur le temps de la session, puis
-      <strong>effacees automatiquement apres 48 heures sans activite</strong>. Selon la
-      configuration d'hebergement, un redemarrage du serveur peut les effacer plus tot.
+      logo televerse) : conservees le temps de la session, puis <strong>effacees
+      automatiquement 48 heures apres la derniere activite</strong>. Tant qu'un appareil reste
+      connecte a la salle, celle-ci est consideree comme en usage et n'est pas effacee : le
+      delai court a partir du moment ou le dernier ecran se deconnecte. Selon l'hebergement, un
+      redemarrage peut les effacer plus tot.
     </li>
     <li>
       <strong>Les questions du public</strong> : le texte saisi et, facultativement, un prenom.

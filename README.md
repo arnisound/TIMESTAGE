@@ -363,7 +363,9 @@ toutes les dix secondes, bien avant cette limite.
   Cloudflare, sans compte ni reseau : `npm run cf:dev`.
 - La version de Node utilisee par la construction Cloudflare est fixee par le
   fichier `.node-version`.
-- Les salles s'effacent d'elles-memes apres 48 heures sans activite.
+- Les salles s'effacent d'elles-memes 48 heures apres la derniere activite, a
+  condition que plus aucun appareil n'y soit connecte : un ecran allume tient
+  sa salle en vie aussi longtemps qu'il reste branche.
 
 ### Render : serveur complet, gratuit
 

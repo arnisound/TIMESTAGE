@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { createRoomState, makeCode, normalizeCode, defaultSettings, defaultMessage, defaultPresets, isOwner, ROOM_TTL_MS } from '../core/rooms.js';
+import { createRoomState, makeCode, normalizeCode, defaultSettings, defaultMessage, defaultPresets, isOwner, isExpired, ROOM_TTL_MS } from '../core/rooms.js';
 import * as T from '../shared/timer.js';
 
 export * from '../core/rooms.js';
@@ -71,10 +71,15 @@ export class RoomStore {
     return isOwner(room, token);
   }
 
-  cleanup(now = Date.now()) {
+  /**
+   * Efface les salles oubliees. `isBusy` dit lesquelles ont encore des
+   * appareils connectes : une salle affichee est une salle en usage, et ne
+   * doit pas disparaitre sous les yeux du public.
+   */
+  cleanup(now = Date.now(), isBusy = () => false) {
     let removed = 0;
     for (const [code, room] of this.rooms) {
-      if (now - room.updatedAt > this.ttlMs) {
+      if (isExpired(room, { now, busy: isBusy(code), ttlMs: this.ttlMs })) {
         this.rooms.delete(code);
         removed++;
       }

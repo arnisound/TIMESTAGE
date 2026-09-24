@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RoomStore, applyCommand, addQuestion, viewerState, publicState, tickRoom, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo, setAccessCode, checkAccess, rotateOwnerToken } from '../server/rooms.js';
+import { RoomStore, createRoomState, applyCommand, addQuestion, viewerState, publicState, tickRoom, nextDeadline, isExpired, cleanText, normalizeCode, applySettings, defaultSettings, setRoomLogo, clearRoomLogo, setAccessCode, checkAccess, rotateOwnerToken } from '../server/rooms.js';
 import { MS } from '../shared/time.js';
 import { EFFECT_NAMES } from '../shared/effects.js';
 
@@ -398,4 +398,81 @@ test('le catalogue d animations est coherent', () => {
     assert.equal(applyCommand(room, 'effect.play', { name }).ok, true, 'animation refusee : ' + name);
     assert.ok(['back', 'front'].includes(room.effect.layer), 'plan invalide pour ' + name);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Expiration et reveils programmes
+// ---------------------------------------------------------------------------
+
+test('une salle affichee n expire pas, une salle oubliee si', () => {
+  const room = createRoomState('VEILL');
+  const now = Date.now();
+  room.updatedAt = now - 50 * MS.h; // plus vieille que les 48 h de duree de vie
+
+  assert.equal(isExpired(room, { now }), true, 'personne connecte : elle part');
+  assert.equal(isExpired(room, { now, busy: true }), false, 'un ecran l affiche : elle reste');
+
+  // Le point de detail qui compte : sans appareil connecte, l'echeance est
+  // deja passee, ce qui declenche l'effacement. Avec un appareil, elle est
+  // repoussee de 48 h, sinon le service se redemanderait un reveil en boucle.
+  assert.ok(nextDeadline(room, { now }) < now, 'echeance passee quand la salle est vide');
+  assert.equal(nextDeadline(room, { now, busy: true }), now + 48 * MS.h);
+});
+
+test('la prochaine echeance est la plus proche des raisons de se reveiller', () => {
+  const room = createRoomState('ECHEA');
+  const now = Date.now();
+
+  // Sans rien de particulier, seule l'expiration compte.
+  assert.equal(nextDeadline(room, { now: room.updatedAt }), room.updatedAt + 48 * MS.h);
+
+  // Un message a masquage automatique passe devant.
+  applyCommand(room, 'message.send', { text: 'Trois minutes', autoHideMs: 3 * MS.m }, now);
+  assert.equal(nextDeadline(room, { now }), now + 3 * MS.m);
+
+  // Une animation plus courte passe devant le message.
+  applyCommand(room, 'effect.play', { name: 'confetti', durationMs: 20 * MS.s }, now);
+  assert.equal(nextDeadline(room, { now }), now + 23 * MS.s, 'fin de l animation, plus trois secondes');
+
+  // Une animation en boucle ne s'arrete pas toute seule : elle ne compte pas.
+  applyCommand(room, 'effect.play', { name: 'fire', durationMs: 20 * MS.s, loop: true }, now);
+  assert.equal(nextDeadline(room, { now }), now + 3 * MS.m, 'le message redevient la prochaine echeance');
+});
+
+test('l enchainement automatique programme le reveil a la fin de la partie', () => {
+  const room = createRoomState('SUITE');
+  const now = Date.now();
+  applyCommand(room, 'session.replace', { parts: [
+    { title: 'Ouverture', durationMs: 5 * MS.m },
+    { title: 'Suite', durationMs: 10 * MS.m },
+  ] }, now);
+  applyCommand(room, 'session.set', { autoAdvance: true }, now);
+  applyCommand(room, 'session.load', { id: room.session.parts[0].id, autostart: true }, now);
+
+  assert.equal(nextDeadline(room, { now }), now + 5 * MS.m);
+
+  // Deux minutes plus tard, le reveil est attendu trois minutes apres.
+  assert.equal(nextDeadline(room, { now: now + 2 * MS.m }), now + 5 * MS.m);
+
+  // Sur la derniere partie, il n'y a plus rien a enchainer.
+  applyCommand(room, 'session.load', { id: room.session.parts[1].id, autostart: true }, now);
+  assert.ok(nextDeadline(room, { now }) > now + MS.h, 'seule l expiration reste');
+});
+
+test('le magasin epargne les salles dont un ecran est encore connecte', () => {
+  const store = new RoomStore({ file: null, ttlMs: MS.h });
+  const vieille = store.create('Oubliee').room;
+  const affichee = store.create('Affichee').room;
+  const now = Date.now();
+  vieille.updatedAt = now - 2 * MS.h;
+  affichee.updatedAt = now - 2 * MS.h;
+
+  const efface = store.cleanup(now, (code) => code === affichee.code);
+  assert.equal(efface, 1);
+  assert.equal(store.get(vieille.code), null, 'la salle sans personne est effacee');
+  assert.ok(store.get(affichee.code), 'la salle avec un ecran est conservee');
+
+  // Une fois l'ecran parti, elle part au passage suivant.
+  assert.equal(store.cleanup(now), 1);
+  assert.equal(store.get(affichee.code), null);
 });
