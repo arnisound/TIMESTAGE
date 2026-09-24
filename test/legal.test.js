@@ -111,23 +111,31 @@ test('les pages publiques ne renvoient pas vers le depot de code', () => {
 });
 
 test('aucun tiret cadratin dans les textes du projet', () => {
-  // Choix de redaction : la ponctuation francaise du projet se passe de « — »
-  // et de « – ». Ce test les attrape s'ils reviennent.
-  const fichiers = [
-    'LICENSE', 'README.md', 'package.json',
-    'public/index.html', 'public/legal.html', 'public/control.html',
-    'public/ask.html', 'public/offline.html', 'public/display.html',
-    'public/js/control.js', 'public/js/display.js', 'public/js/ask.js',
-    'public/js/index.js', 'public/js/offline.js',
-    'public/js/lib/stage.js', 'public/js/lib/net.js', 'public/js/lib/dom.js',
-    'server/index.js', 'server/rooms.js',
-    'shared/time.js', 'shared/timer.js', 'shared/effects.js',
-  ];
-  for (const fichier of fichiers) {
-    const contenu = read(fichier);
-    const ligne = contenu.split('\n').findIndex((l) => /[\u2013\u2014]/.test(l));
-    assert.equal(ligne, -1, `tiret cadratin dans ${fichier} ligne ${ligne + 1}`);
-  }
+  // Choix de redaction : la ponctuation francaise du projet se passe du tiret
+  // cadratin (U+2014) et du tiret demi-cadratin (U+2013). Le balayage est
+  // automatique, et non une liste de fichiers : une liste tenue a la main
+  // prend du retard des qu'un fichier arrive, et ne protege alors plus rien.
+  // Les deux caracteres ne sont nommes ici que par leur code, sinon ce
+  // commentaire se ferait prendre par son propre test.
+  const ignores = new Set(['node_modules', '.git', 'dist', 'dist-worker', '.wrangler', 'data', 'brand']);
+  const extensions = /\.(md|html|js|mjs|css|json)$/;
+  const fautifs = [];
+
+  const balaye = (dossier) => {
+    for (const entree of fs.readdirSync(path.join(ROOT, dossier), { withFileTypes: true })) {
+      if (ignores.has(entree.name)) continue;
+      const relatif = path.join(dossier, entree.name);
+      if (entree.isDirectory()) balaye(relatif);
+      else if (extensions.test(entree.name) || entree.name === 'LICENSE') {
+        const lignes = fs.readFileSync(path.join(ROOT, relatif), 'utf8').split('\n');
+        const i = lignes.findIndex((l) => /[\u2013\u2014]/.test(l));
+        if (i >= 0) fautifs.push(`${relatif} ligne ${i + 1}`);
+      }
+    }
+  };
+  balaye('.');
+
+  assert.deepEqual(fautifs, [], 'tiret cadratin trouve');
 });
 
 test('les durees annoncees au public sont celles du code', () => {
